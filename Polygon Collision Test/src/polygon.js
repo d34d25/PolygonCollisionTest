@@ -8,6 +8,8 @@ export class Polygon
         this.rotation = rotation;
 
         this.localVertices = [];
+
+        this.color = 'blue';
     }
 
     getVertices() 
@@ -22,7 +24,7 @@ export class Polygon
     }
 
 
-    drawPolygon(ctx, vertices, fillStyle = 'blue') 
+    drawPolygon(ctx, vertices, fillStyle = this.color) 
     {
         if (vertices.length < 2) return;
 

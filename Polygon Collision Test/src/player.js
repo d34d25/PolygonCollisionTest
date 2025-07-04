@@ -30,7 +30,6 @@ export class Player
 
     move()
     {
-
         //'ArrowRight' 'ArrowLeft' 'ArrowUp' 'ArrowDown'
         if (Player.keys['d']) this.entity.xVelocity = this.entity.speed;
         else if (Player.keys['a']) this.entity.xVelocity = -this.entity.speed;
@@ -39,7 +38,6 @@ export class Player
         if (Player.keys['w']) this.entity.yVelocity = -this.entity.speed;
         else if (Player.keys['s']) this.entity.yVelocity = this.entity.speed;
         else this.entity.yVelocity = 0;
-
 
         if(Player.keys['e']) this.entity.polygon.rotation -= this.entity.rotationSpeed;
         else if (Player.keys['q']) this.entity.polygon.rotation += this.entity.rotationSpeed;

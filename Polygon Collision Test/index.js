@@ -1,6 +1,7 @@
 import { Polygon } from "./src/polygon.js";
 import { Player } from "./src/player.js";
-import { shapeOverlapDiagonal } from "./src/physics/collisions.js";
+import { SAT, shapeOverlapDiagonal } from "./src/physics/collisions.js";
+import { Entity } from "./src/entity.js";
 
 //canvas initialization
 const canvas = document.getElementById('myCanvas');
@@ -34,6 +35,10 @@ obstaclePolygon.localVertices = [
     { x: -sizeb, y: sizeb }, 
 ];
 
+obstaclePolygon.color = 'green';
+
+var obstacleEntity = new Entity(obstaclePolygon, 0, 0);
+
 //gameloop start
 
 let lastTime = 0;
@@ -48,20 +53,29 @@ function gameLoop(timestamp)
 
     //update
 
-    obstaclePolygon.drawPolygon(ctx, obstaclePolygon.getVertices(), 'red');
-
-
     player.move();
-
     player.update(dt);
 
-    player.entity.polygon.drawPolygon(ctx, player.entity.polygon.getVertices());
+    let collisionResult = SAT(player.entity.polygon, obstacleEntity.polygon);
 
-    
-    if(shapeOverlapDiagonal(player.entity.polygon, obstaclePolygon))
+    if(collisionResult.collision)
     {
-        console.log('colliding');
+        player.entity.polygon.color = 'red';
+        
+        const correction = {
+        x: -collisionResult.normal.x * collisionResult.depth / 1,
+        y: -collisionResult.normal.y * collisionResult.depth / 1
+        };
+
+        player.entity.move(correction);
     }
+    else
+    {
+        player.entity.polygon.color = 'blue';
+    }
+
+    obstaclePolygon.drawPolygon(ctx, obstaclePolygon.getVertices());
+    player.entity.polygon.drawPolygon(ctx, player.entity.polygon.getVertices());
 
     //console.log("" + dt);
 
@@ -69,3 +83,33 @@ function gameLoop(timestamp)
 }
 
 requestAnimationFrame(gameLoop);
+
+
+/*
+if I want to push the obstacle:
+
+let collisionResult = SAT(player.entity.polygon, obstacleEntity.polygon);
+
+    if(collisionResult.collision)
+    {
+        player.entity.polygon.color = 'red';
+        
+        const correction = {
+        x: -collisionResult.normal.x * collisionResult.depth / 2,
+        y: -collisionResult.normal.y * collisionResult.depth / 2 //if two obstacles can move then divide by 2 example. y: -collisionResult.normal.y * collisionResult.depth / 2 
+        };
+
+        const correctionB = {
+        x: collisionResult.normal.x * collisionResult.depth / 2,
+        y: collisionResult.normal.y * collisionResult.depth / 2 
+        };
+
+        player.entity.move(correction);
+        obstacleEntity.move(correctionB);
+    }
+    else
+    {
+        player.entity.polygon.color = 'blue';
+    }
+
+ */

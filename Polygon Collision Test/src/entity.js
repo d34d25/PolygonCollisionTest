@@ -10,6 +10,12 @@ export class Entity
         this.yVelocity = 0;
     }
 
+    move(ammount)
+    {
+        this.polygon.x += ammount.x;
+        this.polygon.y += ammount.y;
+    }
+
     update(dt)
     {
         this.polygon.x += this.xVelocity * dt;
