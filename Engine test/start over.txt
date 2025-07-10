@@ -1,0 +1,25 @@
+Separate classes in components that can be utilized separately:
+
+Transform: position, rotation, scale (optional)
+
+Polygon: shape data, vertex info, no position or rotation!
+
+Rigidbody: velocity, acceleration, mass, forces, physics update
+
+Collider: uses Polygon + Transform for collision detection info
+
+Entity: container for components — owns them, manages updates
+
+Player: wraps entity
+
+Scene: render and updates all entities, manages the collision detection and resolution, also handles the game state
+
+Input: have a list of keys and a method that returns true/false for each key in that list that is being pressed
+
+Render: manages rendering but not the game loop. draws stuff, play animations
+
+Sound: reproduces sounds
+
+Math js file (no class, plain functions)
+
+Collisions js file (no class, plain functions)
