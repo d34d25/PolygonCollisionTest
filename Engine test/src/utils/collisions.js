@@ -1,3 +1,4 @@
+import { Transform } from "../components/transform.js";
 import { dotProduct, projectVertices } from "./maths.js";
 
 export function SAT(entityA, entityB)
@@ -103,8 +104,8 @@ export function SAT(entityA, entityB)
     }
     
 
-    let centerA = {x: entityA.transform.position.x, y: entityA.transform.position.y};
-    let centerB = {x: entityB.transform.position.x, y: entityB.transform.position.y};
+    let centerA = {x: entityA.getComponent(Transform).position.x, y: entityA.getComponent(Transform).position.y};
+    let centerB = {x: entityB.getComponent(Transform).position.x, y: entityB.getComponent(Transform).position.y};
 
     direction.x = centerB.x - centerA.x;
     direction.y = centerB.y - centerA.y;

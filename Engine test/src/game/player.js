@@ -1,4 +1,5 @@
 import { Entity } from "../components/entity.js";
+import { Rigidbody } from "../components/rigidbody.js";
 import { Input } from "./input.js";
 
 export class Player
@@ -16,41 +17,41 @@ export class Player
     {
         if(this.input.isKeyDown('d'))
         {
-            this.entity.rb.linearVelocity.x = this.moveSpeed;
+            this.entity.getComponent(Rigidbody).linearVelocity.x = this.moveSpeed;
         }
         else if(this.input.isKeyDown('a'))
         {
-            this.entity.rb.linearVelocity.x = -this.moveSpeed;
+            this.entity.getComponent(Rigidbody).linearVelocity.x = -this.moveSpeed;
         }
         else
         {
-            this.entity.rb.linearVelocity.x = 0;
+            this.entity.getComponent(Rigidbody).linearVelocity.x = 0;
         }
 
         if(this.input.isKeyDown('w'))
         {
-            this.entity.rb.linearVelocity.y = -this.moveSpeed;
+            this.entity.getComponent(Rigidbody).linearVelocity.y = -this.moveSpeed;
         }
         else if(this.input.isKeyDown('s'))
         {
-            this.entity.rb.linearVelocity.y = this.moveSpeed;
+            this.entity.getComponent(Rigidbody).linearVelocity.y = this.moveSpeed;
         }
         else
         {
-            this.entity.rb.linearVelocity.y = 0;
+            this.entity.getComponent(Rigidbody).linearVelocity.y = 0;
         }
 
         if(this.input.isKeyDown('e'))
         {
-            this.entity.rb.angularVelocity = this.rotationSpeed;
+            this.entity.getComponent(Rigidbody).angularVelocity = this.rotationSpeed;
         }
         else if(this.input.isKeyDown('q'))
         {
-            this.entity.rb.angularVelocity = -this.rotationSpeed;
+            this.entity.getComponent(Rigidbody).angularVelocity = -this.rotationSpeed;
         }
         else
         {
-            this.entity.rb.angularVelocity = 0;
+            this.entity.getComponent(Rigidbody).angularVelocity = 0;
         }
 
     }

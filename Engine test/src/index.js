@@ -1,4 +1,7 @@
 import { Entity } from "./components/entity.js";
+import { Polygon } from "./components/polygon.js";
+import { Rigidbody } from "./components/rigidbody.js";
+import { Transform } from "./components/transform.js";
 import { Player } from "./game/player.js";
 import { drawPolygon } from "./systems/render.js";
 import { SAT } from "./utils/collisions.js";
@@ -12,9 +15,16 @@ const ctx = canvas.getContext('2d');
 
 var testPlayer = new Player();
 
+testPlayer.entity = new Entity([
+  new Transform(),
+  new Rigidbody(),
+  new Polygon()
+]);
+
+
 const size = 40;
 
-testPlayer.entity.polygon.localVertices = [
+testPlayer.entity.getComponent(Polygon).localVertices = [
     { x: -size, y: -size },
     { x: size, y: -size },  
     { x: size, y: size },   
@@ -27,14 +37,18 @@ testPlayer.moveSpeed = 100;
 
 var testObstacle = new Entity();
 
-testObstacle.transform.position.x = 220;
-testObstacle.transform.position.y = 220;
+testObstacle.addComponent(new Transform());
+testObstacle.addComponent(new Rigidbody());
+testObstacle.addComponent(new Polygon());
 
-testObstacle.transform.setRotation(45);
+testObstacle.getComponent(Transform).position.x = 220;
+testObstacle.getComponent(Transform).position.y = 220;
+
+testObstacle.getComponent(Transform).setRotation(45);
 
 const sizeB = 50;
 
-testObstacle.polygon.localVertices = [
+testObstacle.getComponent(Polygon).localVertices = [
     { x: -sizeB, y: -sizeB },
     { x: sizeB, y: -sizeB },  
     { x: sizeB, y: sizeB },   
@@ -63,7 +77,7 @@ function gameLoop(timestamp)
 
     if(collisionResult.collision)
     {
-        testPlayer.entity.polygon.color = 'red';
+        testPlayer.entity.getComponent(Polygon).color = 'red';
 
         const correction = {
         x: -collisionResult.normal.x * collisionResult.depth,
@@ -74,10 +88,10 @@ function gameLoop(timestamp)
     }
     else
     {
-        testPlayer.entity.polygon.color = 'blue';
+        testPlayer.entity.getComponent(Polygon).color = 'blue';
     }
 
-    drawPolygon(ctx, testPlayer.entity.getWorldVertices(), testPlayer.entity.polygon.color);
+    drawPolygon(ctx, testPlayer.entity.getWorldVertices(), testPlayer.entity.getComponent(Polygon).color);
 
     drawPolygon(ctx, testObstacle.getWorldVertices(), 'yellow');
 
