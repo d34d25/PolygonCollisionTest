@@ -86,7 +86,7 @@ export class Entity
         const transform = this.getComponent(Transform);
         const rb = this.getComponent(Rigidbody);
 
-        if(!rb.isStatic) transform.move(amount);
+        if(rb.mass !== Infinity) transform.move(amount);
         else return;
     }
 

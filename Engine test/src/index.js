@@ -38,6 +38,7 @@ testPlayer.entity.getComponent(Transform).setScale(1.5,0.7);
 
 testPlayer.entity.getComponent(Rigidbody).linearDamping = 1;
 
+testPlayer.entity.getComponent(Rigidbody).restitution = 1;
 testPlayer.entity.getComponent(Rigidbody).mass = 1;
 
 testPlayer.entity.hasCollisions = true;
@@ -55,7 +56,9 @@ testObstacle.getComponent(Transform).setRotation(45);
 
 testObstacle.getComponent(Rigidbody).linearDamping = 1;
 
-testObstacle.getComponent(Rigidbody).isStatic = true;
+testObstacle.getComponent(Rigidbody).mass = Infinity;
+
+testObstacle.getComponent(Rigidbody).restitution = 1;
 
 const sizeB = 50;
 

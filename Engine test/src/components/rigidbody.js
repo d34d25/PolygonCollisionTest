@@ -2,7 +2,7 @@ import { Vector2D } from "../utils/maths.js";
 
 export class Rigidbody
 {
-    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = 1 ,density = 1, bounciness = 0, isStatic = true)
+    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = 1 ,density = 1, restitution = 0)
     {
         this.linearVelocity = linearVelocity;
         this.angularVelocity = angularVelocity;
@@ -13,8 +13,7 @@ export class Rigidbody
 
         this.mass = mass;
         this.density = density;
-        this.bounciness = bounciness;
-        this.isStatic = isStatic;
+        this.restitution = restitution; //restitution is how bouncy it is
     }
 
     get inverseMass()
