@@ -118,3 +118,8 @@ export function SAT(entityA, entityB)
 
     return {collision: true, normal,depth};
 }
+
+export function AABBvsAABB(boxA, boxB)
+{
+
+}

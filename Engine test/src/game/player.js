@@ -15,31 +15,31 @@ export class Player
 
     movePlayer()
     {
+        if(!this.entity.getComponent(Rigidbody))
+        {
+            console.warn("No rigidbody was attached to this entity"); 
+            return;
+        }
+
         if(this.input.isKeyDown('d'))
         {
-            this.entity.getComponent(Rigidbody).linearVelocity.x = this.moveSpeed;
+            this.entity.getComponent(Rigidbody).force.x = this.moveSpeed;
         }
         else if(this.input.isKeyDown('a'))
         {
-            this.entity.getComponent(Rigidbody).linearVelocity.x = -this.moveSpeed;
+            this.entity.getComponent(Rigidbody).force.x = -this.moveSpeed;
         }
-        else
-        {
-            this.entity.getComponent(Rigidbody).linearVelocity.x = 0;
-        }
+    
 
         if(this.input.isKeyDown('w'))
         {
-            this.entity.getComponent(Rigidbody).linearVelocity.y = -this.moveSpeed;
+            this.entity.getComponent(Rigidbody).force.y = -this.moveSpeed;
         }
         else if(this.input.isKeyDown('s'))
         {
-            this.entity.getComponent(Rigidbody).linearVelocity.y = this.moveSpeed;
+            this.entity.getComponent(Rigidbody).force.y = this.moveSpeed;
         }
-        else
-        {
-            this.entity.getComponent(Rigidbody).linearVelocity.y = 0;
-        }
+   
 
         if(this.input.isKeyDown('e'))
         {

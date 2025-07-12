@@ -1,13 +1,15 @@
 //entity is the container for the rest of components
-import { Vector2D } from "../utils/maths.js";
 import { Polygon } from "./polygon.js";
 import { Rigidbody } from "./rigidbody.js";
 import { Transform } from "./transform.js";
 
 export class Entity
 {
+    static nextId = 1;
+
     constructor(components = [], hasCollisions = true) 
     {
+        this.id = Entity.nextId++;
         this.components = new Map();
 
         for (const component of components) 
@@ -15,14 +17,16 @@ export class Entity
             this.addComponent(component);
         }
 
-        this._tempMovement = new Vector2D();
         this.hasCollisions = hasCollisions;
     }
 
-
     getWorldVertices()
     {
-        if(!this.hasComponent(Polygon) || !this.hasComponent(Transform)) return;
+        if(!this.hasComponent(Polygon) || !this.hasComponent(Transform))
+        {
+            console.warn("A Polygon and a Transform need to be attached")
+            return [];
+        }
 
         const transform = this.getComponent(Transform);
         const polygon = this.getComponent(Polygon);
@@ -30,36 +34,61 @@ export class Entity
         const cos = Math.cos(transform.rotationRAD);
         const sin = Math.sin(transform.rotationRAD);
         const pos = transform.position;
+        const scale = transform.scale;
 
-        return polygon.localVertices.map(({ x, y }) => ({
-            x: pos.x + x * cos - y * sin,
-            y: pos.y + x * sin + y * cos
-        }));
+        return polygon.localVertices.map(({ x, y }) => {
+            const scaledX = x * scale.x;
+            const scaledY = y * scale.y;
+
+            return {
+                x: pos.x + scaledX * cos - scaledY * sin,
+                y: pos.y + scaledX * sin + scaledY * cos
+            };
+        });
+    }
+
+    getArea() 
+    {
+        if(!this.hasComponent(Polygon) || !this.hasComponent(Transform))
+        {
+            console.warn("A Polygon and a Transform need to be attached")
+            return 0;
+        }
+
+        const polygon = this.getComponent(Polygon);
+        const transform = this.getComponent(Transform);
+
+        const localArea = polygon.getLocalArea();
+        const { x: sx, y: sy } = transform.scale;
+
+        return localArea * Math.abs(sx * sy);
     }
 
     move(amount)
     {
+        if(!this.hasComponent(Transform))
+        {
+            console.warn("A Transform needs to be attached")
+        }
+
         const transform = this.getComponent(Transform);
-        if (transform) transform.move(amount);
+        transform.move(amount);
     }
 
-    update(dt) 
+    moveIfNotStatic(amount)
     {
+        if(!this.hasComponent(Rigidbody) || !this.hasComponent(Transform))
+        {
+            console.warn("A Rigidbody and a Transform need to be attached")
+            return;
+        }
+
         const transform = this.getComponent(Transform);
         const rb = this.getComponent(Rigidbody);
 
-        if (!transform || !rb) return;
-
-        transform.rotationRAD += rb.angularVelocity * dt;
-
-        this._tempMovement.x = rb.linearVelocity.x;
-        this._tempMovement.y = rb.linearVelocity.y;
-
-        this._tempMovement.scale(dt);
-        transform.move(this._tempMovement);
+        if(!rb.isStatic) transform.move(amount);
+        else return;
     }
-
-
 
     addComponent(component) 
     {
@@ -88,13 +117,3 @@ export class Entity
     }
 
 }
-
-
-
-//(transform = new Transform(), polygon = new Polygon(), rb = new Rigidbody(), hasCollisions = true)
-      //this.transform = transform;
-        //this.polygon = polygon;
-        //this.rb = rb;
-
-
-//this.collider = { transform: this.transform, polygon: this.polygon };

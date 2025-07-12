@@ -1,10 +1,11 @@
+
 import { Entity } from "./components/entity.js";
 import { Polygon } from "./components/polygon.js";
 import { Rigidbody } from "./components/rigidbody.js";
 import { Transform } from "./components/transform.js";
 import { Player } from "./game/player.js";
 import { drawPolygon } from "./systems/render.js";
-import { SAT } from "./utils/collisions.js";
+import { PhysicsEngine } from "./systems/physics.js";
 
 //canvas initialization
 const canvas = document.getElementById('myCanvas');
@@ -22,7 +23,7 @@ testPlayer.entity = new Entity([
 ]);
 
 
-const size = 40;
+const size = 50;
 
 testPlayer.entity.getComponent(Polygon).localVertices = [
     { x: -size, y: -size },
@@ -33,7 +34,13 @@ testPlayer.entity.getComponent(Polygon).localVertices = [
 
 testPlayer.moveSpeed = 100;
 
+testPlayer.entity.getComponent(Transform).setScale(1.5,0.7);
 
+testPlayer.entity.getComponent(Rigidbody).linearDamping = 1;
+
+testPlayer.entity.getComponent(Rigidbody).mass = 1;
+
+testPlayer.entity.hasCollisions = true;
 
 var testObstacle = new Entity();
 
@@ -46,6 +53,10 @@ testObstacle.getComponent(Transform).position.y = 220;
 
 testObstacle.getComponent(Transform).setRotation(45);
 
+testObstacle.getComponent(Rigidbody).linearDamping = 1;
+
+testObstacle.getComponent(Rigidbody).isStatic = true;
+
 const sizeB = 50;
 
 testObstacle.getComponent(Polygon).localVertices = [
@@ -54,6 +65,11 @@ testObstacle.getComponent(Polygon).localVertices = [
     { x: sizeB, y: sizeB },   
     { x: -sizeB, y: sizeB }, 
 ]
+
+
+console.log("" + testPlayer.entity.getArea());
+
+const physEngine = new PhysicsEngine([testPlayer.entity, testObstacle]); 
 
 //gameloop start
 
@@ -71,25 +87,9 @@ function gameLoop(timestamp)
 
     testPlayer.movePlayer();
 
-    testPlayer.entity.update(dt); //update is only needed when the position is changed via velocity
+    physEngine.update(dt);
 
-    let collisionResult = SAT(testPlayer.entity, testObstacle);
-
-    if(collisionResult.collision)
-    {
-        testPlayer.entity.getComponent(Polygon).color = 'red';
-
-        const correction = {
-        x: -collisionResult.normal.x * collisionResult.depth,
-        y: -collisionResult.normal.y * collisionResult.depth
-        };
-
-        testPlayer.entity.move(correction);
-    }
-    else
-    {
-        testPlayer.entity.getComponent(Polygon).color = 'blue';
-    }
+    physEngine.resolveCollisions(physEngine.entities[0], physEngine.entities[1]);
 
     drawPolygon(ctx, testPlayer.entity.getWorldVertices(), testPlayer.entity.getComponent(Polygon).color);
 
@@ -100,3 +100,6 @@ function gameLoop(timestamp)
 }
 
 requestAnimationFrame(gameLoop);
+
+
+

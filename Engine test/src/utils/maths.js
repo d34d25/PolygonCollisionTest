@@ -1,9 +1,14 @@
 export class Vector2D
-{
+{    
     constructor(x = 0,y = 0)
     {
         this.x = x;
         this.y = y;
+    }
+
+    static get zero()
+    {
+        return new Vector2D(0,0);
     }
 
     clone() 
@@ -122,3 +127,10 @@ export function normalize(v)
     }
     return { x: v.x / length, y: v.y / length };
 }
+
+export function clamp(value, min, max) 
+{
+  return Math.min(Math.max(value, min), max);
+}
+
+

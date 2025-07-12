@@ -16,14 +16,6 @@ export class EntityGroup
       if (index !== -1) this.entities.splice(index, 1);
     }
 
-    update(dt) 
-    {
-      for (const entity of this.entities) 
-      {
-        entity.update(dt);
-      }
-    }
-
     move(amount) 
     {
       for (const entity of this.entities) 
@@ -31,7 +23,6 @@ export class EntityGroup
         entity.move(amount);
       }
     }
-
 
     getEntitiesWithComponent(componentClass) 
     {
