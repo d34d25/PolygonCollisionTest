@@ -2,24 +2,39 @@ import { Vector2D } from "../utils/maths.js";
 
 export class Rigidbody
 {
-    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = 1 ,density = 1, restitution = 0)
+    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = 1, angularDamping = 1, rotationalInertia = 1 ,density = 1, restitution = 0)
     {
         this.linearVelocity = linearVelocity;
         this.angularVelocity = angularVelocity;
 
         this.force = force;
         this.torque = torque;
+
+        this.rotationalInertia = rotationalInertia;
+
         this.linearDamping = linearDamping;
+        this.angularDamping = angularDamping;
 
         this.mass = mass;
-        this.density = density;
         this.restitution = restitution; //restitution is how bouncy it is
+
+
+        //variables that aren't being used at the moment
+        this.density = density;
+       
     }
 
     get inverseMass()
     {
         if(this.mass != 0) return 1/ this.mass;
         else return 0;
+    }
+
+
+    makeStatic()
+    {
+        this.mass = Infinity;
+        this.rotationalInertia = Infinity;
     }
 
     resetForce()
@@ -38,9 +53,14 @@ export class Rigidbody
         this.linearVelocity.add(this.scaleByMassInverse(impulseVector));
     }
 
-    addForce(ammount)
+    addForce(amount)
     {
-        this.force = ammount;
+        this.force = amount;
+    }
+
+    addTorque(amount)
+    {
+        this.torque = amount;
     }
     
 }

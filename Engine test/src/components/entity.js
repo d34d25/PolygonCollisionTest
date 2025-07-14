@@ -1,7 +1,8 @@
 //entity is the container for the rest of components
-import { Polygon } from "./polygon.js";
+import { Polygon } from "./shapes/polygon.js";
 import { Rigidbody } from "./rigidbody.js";
 import { Transform } from "./transform.js";
+import { Circle } from "./shapes/circle.js";
 
 export class Entity
 {
@@ -47,7 +48,7 @@ export class Entity
         });
     }
 
-    getArea() 
+    get polygonArea() 
     {
         if(!this.hasComponent(Polygon) || !this.hasComponent(Transform))
         {
@@ -64,6 +65,77 @@ export class Entity
         return localArea * Math.abs(sx * sy);
     }
 
+
+    get polygonSize()
+    {
+        if(!this.hasComponent(Polygon) || !this.hasComponent(Transform))
+        {
+            console.warn("A Polygon and a Transform need to be attached")
+            return 0;
+        }
+
+        if (this.getComponent(Polygon).type != 'box')
+        {
+            console.warn("shape type is not box");
+            return {width: 0, height: 0};
+        }
+        else
+        {
+            const worldVerts = this.getWorldVertices();
+            if (worldVerts.length === 0) return { width: 0, height: 0 };
+            
+            let minX = worldVerts[0].x;
+            let maxX = worldVerts[0].x;
+            let minY = worldVerts[0].y;
+            let maxY = worldVerts[0].y;
+
+            for (let i = 1; i < worldVerts.length; i++)
+            {
+                const v = worldVerts[i];
+                if (v.x < minX) minX = v.x;
+                if (v.x > maxX) maxX = v.x;
+                if (v.y < minY) minY = v.y;
+                if (v.y > maxY) maxY = v.y;
+            }
+
+            return {
+                width: maxX - minX,
+                height: maxY - minY
+            };
+
+        }
+    }
+
+    calculateRotationalInertia()
+    {
+        if(!(this.hasComponent(Polygon) || this.hasComponent(Circle)) && !this.hasComponent(Rigidbody))
+        {
+            console.warn("A Polygon or a Circle and a Rigidbody need to be attached")
+            return 1;
+        }
+
+        let polygon = null;
+        let circle = null;
+        
+        if(this.hasComponent(Polygon))
+        {
+            polygon = this.getComponent(Polygon);
+        }
+        else if (this.hasComponent(Circle))
+        {
+            circle = this.getComponent(Circle);
+        }
+
+        const rb = this.getComponent(Rigidbody);
+
+        if (polygon.type === 'box')
+        {
+            return (1 / 12) * rb.mass * (this.polygonSize.width * this.polygonSize.width + this.polygonSize.height * this.polygonSize.height);
+        }
+    
+    }
+
+    
     move(amount)
     {
         if(!this.hasComponent(Transform))

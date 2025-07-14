@@ -1,11 +1,12 @@
 
 import { Entity } from "./components/entity.js";
-import { Polygon } from "./components/polygon.js";
+import { Polygon } from "./components/shapes/polygon.js";
 import { Rigidbody } from "./components/rigidbody.js";
 import { Transform } from "./components/transform.js";
 import { Player } from "./game/player.js";
 import { drawPolygon } from "./systems/render.js";
 import { PhysicsEngine } from "./systems/physics.js";
+import { Vector2D } from "./utils/maths.js";
 
 //canvas initialization
 const canvas = document.getElementById('myCanvas');
@@ -25,21 +26,18 @@ testPlayer.entity = new Entity([
 
 const size = 50;
 
-testPlayer.entity.getComponent(Polygon).localVertices = [
-    { x: -size, y: -size },
-    { x: size, y: -size },  
-    { x: size, y: size },   
-    { x: -size, y: size }, 
-];
+testPlayer.entity.getComponent(Polygon).createBox(size);
 
-testPlayer.moveSpeed = 100;
+testPlayer.moveSpeed = 3000;
 
 testPlayer.entity.getComponent(Transform).setScale(1.5,0.7);
 
-testPlayer.entity.getComponent(Rigidbody).linearDamping = 1;
+testPlayer.entity.getComponent(Rigidbody).linearDamping = 10;
 
 testPlayer.entity.getComponent(Rigidbody).restitution = 1;
 testPlayer.entity.getComponent(Rigidbody).mass = 1;
+testPlayer.entity.getComponent(Rigidbody).angularDamping = 3;
+testPlayer.entity.getComponent(Rigidbody).rotationalInertia = 20; //testPlayer.entity.calculateRotationalInertia();
 
 testPlayer.entity.hasCollisions = true;
 
@@ -56,23 +54,34 @@ testObstacle.getComponent(Transform).setRotation(45);
 
 testObstacle.getComponent(Rigidbody).linearDamping = 1;
 
-testObstacle.getComponent(Rigidbody).mass = Infinity;
+//testObstacle.getComponent(Rigidbody).makeStatic();
+testObstacle.getComponent(Rigidbody).rotationalInertia = 5;
 
 testObstacle.getComponent(Rigidbody).restitution = 1;
 
 const sizeB = 50;
 
-testObstacle.getComponent(Polygon).localVertices = [
-    { x: -sizeB, y: -sizeB },
-    { x: sizeB, y: -sizeB },  
-    { x: sizeB, y: sizeB },   
-    { x: -sizeB, y: sizeB }, 
-]
+testObstacle.getComponent(Polygon).createBox(sizeB);
 
 
-console.log("" + testPlayer.entity.getArea());
+var secondObstacle = new Entity([new Transform(new Vector2D(250,500)), new Rigidbody(), new Polygon()], true);
 
-const physEngine = new PhysicsEngine([testPlayer.entity, testObstacle]); 
+//secondObstacle.getComponent(Rigidbody).mass = Infinity;
+secondObstacle.getComponent(Rigidbody).makeStatic();
+
+const sizeC = 100;
+
+secondObstacle.getComponent(Polygon).createBox(sizeC);
+
+secondObstacle.getComponent(Transform).setScale(3,0.5);
+
+secondObstacle.getComponent(Rigidbody).restitution = 10;
+
+console.log("" + testPlayer.entity.polygonArea);
+
+console.log("rotational inertia" + testPlayer.entity.calculateRotationalInertia());
+
+const physEngine = new PhysicsEngine([testPlayer.entity, testObstacle, secondObstacle]); 
 
 //gameloop start
 
@@ -92,12 +101,15 @@ function gameLoop(timestamp)
 
     physEngine.update(dt);
 
-    physEngine.resolveCollisions(physEngine.entities[0], physEngine.entities[1]);
+    physEngine.resolveCollisionsWRotations(physEngine.entities[0], physEngine.entities[1], ctx);
+    physEngine.resolveCollisionsWRotations(physEngine.entities[1], physEngine.entities[2]);
+    physEngine.resolveCollisionsWRotations(physEngine.entities[0], physEngine.entities[2], ctx);
 
     drawPolygon(ctx, testPlayer.entity.getWorldVertices(), testPlayer.entity.getComponent(Polygon).color);
 
     drawPolygon(ctx, testObstacle.getWorldVertices(), 'yellow');
 
+    drawPolygon(ctx, secondObstacle.getWorldVertices(), 'green');
 
     requestAnimationFrame(gameLoop);
 }

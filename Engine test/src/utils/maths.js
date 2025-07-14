@@ -71,6 +71,16 @@ export class Vector2D
         return this.x * v.x + this.y * v.y;
     }
 
+    clamp(maxLength) 
+    {
+        const length = this.magnitude();
+        if (length > maxLength && length !== 0) {
+            this.x = (this.x / length) * maxLength;
+            this.y = (this.y / length) * maxLength;
+        }
+        return this;
+    }
+
 }
 
 
@@ -92,10 +102,16 @@ export function projectVertices(vertices, axis)
     return { min, max };
 }
 
+export const DEFAULT_MARGIN = 0.0005;
 
 export function dotProduct(a, b)
 {
     return a.x * b.x + a.y * b.y;
+}
+
+export function crossProduct(a, b)
+{
+    return a.x * b.y - a.y * b.x;
 }
 
 export function addVectors(v1, v2) 
@@ -106,6 +122,14 @@ export function addVectors(v1, v2)
 export function subtractVectors(v1, v2) 
 {
     return { x: v1.x - v2.x, y: v1.y - v2.y };
+}
+
+export function multiplyVectors(a, b) 
+{
+    return {
+        x: a.x * b.x,
+        y: a.y * b.y
+    };
 }
 
 export function scaleVector(v, scalar) 
@@ -133,4 +157,13 @@ export function clamp(value, min, max)
   return Math.min(Math.max(value, min), max);
 }
 
+export function almostEqual(a,b, margin)
+{
+    return Math.abs(a-b) < margin;
+}
+
+export function almostEqualVector(va, vb, margin)
+{
+    return almostEqual(va.x, vb.x, margin) && almostEqual(va.y, vb.y, margin); 
+}
 

@@ -4,7 +4,7 @@ import { Input } from "./input.js";
 
 export class Player
 {
-    constructor(entity = new Entity(), moveSpeed = 50, rotationSpeed = 5)
+    constructor(entity = new Entity(), moveSpeed = 50, rotationSpeed = 200)
     {
         this.entity = entity;
         this.input = new Input();
@@ -21,38 +21,33 @@ export class Player
             return;
         }
 
-        if(this.input.isKeyDown('d'))
-        {
-            this.entity.getComponent(Rigidbody).force.x = this.moveSpeed;
-        }
-        else if(this.input.isKeyDown('a'))
-        {
-            this.entity.getComponent(Rigidbody).force.x = -this.moveSpeed;
-        }
-    
+        let inputX = 0;
+        let inputY = 0;
 
-        if(this.input.isKeyDown('w'))
-        {
-            this.entity.getComponent(Rigidbody).force.y = -this.moveSpeed;
-        }
-        else if(this.input.isKeyDown('s'))
-        {
-            this.entity.getComponent(Rigidbody).force.y = this.moveSpeed;
-        }
+        let inputR = 0;
+
+
+        if (this.input.isKeyDown('d')) inputX += 1;
+        if (this.input.isKeyDown('a')) inputX -= 1;
+        if (this.input.isKeyDown('w')) inputY -= 1;
+        if (this.input.isKeyDown('s')) inputY += 1;
    
+        if(this.input.isKeyDown('q')) inputR -= 1;
+        if(this.input.isKeyDown('e')) inputR += 1;
 
-        if(this.input.isKeyDown('e'))
+        const length = Math.sqrt(inputX * inputX + inputY * inputY);
+
+        if (length > 0)
         {
-            this.entity.getComponent(Rigidbody).angularVelocity = this.rotationSpeed;
+            inputX /= length;
+            inputY /= length;
         }
-        else if(this.input.isKeyDown('q'))
-        {
-            this.entity.getComponent(Rigidbody).angularVelocity = -this.rotationSpeed;
-        }
-        else
-        {
-            this.entity.getComponent(Rigidbody).angularVelocity = 0;
-        }
+
+        this.entity.getComponent(Rigidbody).force.x = inputX * this.moveSpeed;
+        this.entity.getComponent(Rigidbody).force.y = inputY * this.moveSpeed;
+
+        this.entity.getComponent(Rigidbody).torque = inputR * this.rotationSpeed;
+
 
     }
 }
