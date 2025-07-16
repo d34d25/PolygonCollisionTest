@@ -4,7 +4,7 @@ import { Input } from "./input.js";
 
 export class Player
 {
-    constructor(entity = new Entity(), moveSpeed = 50, rotationSpeed = 200)
+    constructor(entity = new Entity(), moveSpeed = 50, rotationSpeed = 50)
     {
         this.entity = entity;
         this.input = new Input();
@@ -27,13 +27,13 @@ export class Player
         let inputR = 0;
 
 
-        if (this.input.isKeyDown('d')) inputX += 1;
-        if (this.input.isKeyDown('a')) inputX -= 1;
-        if (this.input.isKeyDown('w')) inputY -= 1;
-        if (this.input.isKeyDown('s')) inputY += 1;
+        if (this.input.isKeyDown('d')) inputX = 1;
+        if (this.input.isKeyDown('a')) inputX = -1;
+        if (this.input.isKeyDown('w')) inputY = -1;
+        if (this.input.isKeyDown('s')) inputY = 1;
    
-        if(this.input.isKeyDown('q')) inputR -= 1;
-        if(this.input.isKeyDown('e')) inputR += 1;
+        if(this.input.isKeyDown('q')) inputR = -1;
+        if(this.input.isKeyDown('e')) inputR = 1;
 
         const length = Math.sqrt(inputX * inputX + inputY * inputY);
 
@@ -43,10 +43,10 @@ export class Player
             inputY /= length;
         }
 
-        this.entity.getComponent(Rigidbody).force.x = inputX * this.moveSpeed;
-        this.entity.getComponent(Rigidbody).force.y = inputY * this.moveSpeed;
+        this.entity.getComponent(Rigidbody).force.x += inputX * this.moveSpeed;
+        this.entity.getComponent(Rigidbody).force.y += inputY * this.moveSpeed;
 
-        this.entity.getComponent(Rigidbody).torque = inputR * this.rotationSpeed;
+        this.entity.getComponent(Rigidbody).torque += inputR * this.rotationSpeed;
 
 
     }

@@ -1,4 +1,4 @@
-import { addVectors, clamp, crossProduct, dotProduct, multiplyVectors, subtractVectors, Vector2D } from "../utils/maths.js";
+import { crossProduct, dotProduct, subtractVectors, Vector2D } from "../utils/maths.js";
 import { Rigidbody } from "../components/rigidbody.js";
 import { Transform } from "../components/transform.js";
 import { findContactPointsPolygon, SAT } from "../utils/collisions.js";
@@ -6,14 +6,17 @@ import { drawPoint } from "./render.js";
 
 export class PhysicsEngine
 {
-    constructor(entities = [])
+    constructor(entities = [], gravity = 9.8)
     {
         this.entities = entities;
+        
+        this.gravity = gravity;
 
         for (let entity of entities) 
         {
             this.warn(entity);
         }
+
     }
 
     update(dt)
@@ -25,7 +28,7 @@ export class PhysicsEngine
             const transform = entity.getComponent(Transform);
             const rb = entity.getComponent(Rigidbody);
 
-            // Update rotation
+            //Rotation
             let angularAcceleration = 0;
 
             if(rb.rotationalInertia !== Infinity)
@@ -38,11 +41,19 @@ export class PhysicsEngine
             const angularDampingFactor = 1 - (rb.angularDamping ?? 0) * 0.01;
             rb.angularVelocity *= angularDampingFactor;
 
+            if (Math.abs(rb.angularVelocity) < 0.1 * dt) rb.angularVelocity = 0;
+
             transform.rotationRAD += rb.angularVelocity * dt;
 
             rb.torque = 0;
 
-            // Calculate acceleration = force / mass
+            //Position
+
+            if(rb.affectedByGravity && rb.mass != Infinity)
+            {
+                rb.linearVelocity.y += this.gravity * dt;
+            }
+
             let linearAccelerationX = 0;
             let linearAccelerationY = 0;
             
@@ -52,31 +63,28 @@ export class PhysicsEngine
                 linearAccelerationY = rb.force.y / rb.mass;
             }
 
-            // Update linear velocity: velocity += acceleration * dt
             rb.linearVelocity.x += linearAccelerationX * dt;
             rb.linearVelocity.y += linearAccelerationY * dt;
 
+            const dampingFactorX = Math.exp(-rb.linearDamping * dt);
+            rb.linearVelocity.x *= dampingFactorX;
+
+            let dampingFactorY;
+
+            if (!rb.affectedByGravity) 
+            {
+                dampingFactorY = Math.exp(-rb.linearDamping * dt);
+            } else {
+                dampingFactorY = Math.exp(-rb.linearDamping * 0.25 * dt);
+            }
+
+            rb.linearVelocity.y *= dampingFactorY;
             
-
-            // Apply linear damping: velocity *= (1 - linearDamping * 0.01)
-            const dampingFactor = 1 - rb.linearDamping * 0.01;
-            rb.linearVelocity.x *= dampingFactor;
-            rb.linearVelocity.y *= dampingFactor;
-
-
-            if (rb.linearVelocity.magnitude() < 0.1) rb.linearVelocity = Vector2D.zero;
-            if (Math.abs(rb.angularVelocity) < 0.1) rb.angularVelocity = 0;
+            if (rb.linearVelocity.magnitude() < 0.1 * dt) rb.linearVelocity = Vector2D.zero;
             
+            transform.position.x += rb.linearVelocity.x * dt;
+            transform.position.y += rb.linearVelocity.y * dt;
 
-            // Calculate movement: velocity * dt
-            const movementX = rb.linearVelocity.x * dt;
-            const movementY = rb.linearVelocity.y * dt;
-
-            // Update position
-            transform.position.x += movementX;
-            transform.position.y += movementY;
-
-            // Reset force
             rb.force.x = 0;
             rb.force.y = 0;
 
@@ -91,6 +99,8 @@ export class PhysicsEngine
         const bodyB = entityB.getComponent(Rigidbody);
 
         let relativeVelocity = subtractVectors(bodyB.linearVelocity, bodyA.linearVelocity);
+
+        if(dotProduct(relativeVelocity, collisionResult.normal) > 0) return;
 
         let e;
 
@@ -127,29 +137,29 @@ export class PhysicsEngine
         if(collisionResult.collision)
         {
 
-            let half = 2;
-
-            if (entityA.getComponent(Rigidbody).mass === Infinity || entityB.getComponent(Rigidbody).mass === Infinity)
+            if(entityA.getComponent(Rigidbody).mass === Infinity && entityB.getComponent(Rigidbody).mass === Infinity)
             {
-                half = 1;
+                return;
+            }
+
+            if (entityA.getComponent(Rigidbody).mass === Infinity)
+            {
+                entityB.move({ x: collisionResult.normal.x * collisionResult.depth,
+                y: collisionResult.normal.y * collisionResult.depth});
+            }
+            else if (entityB.getComponent(Rigidbody).mass === Infinity)
+            {
+                entityA.move({x: -collisionResult.normal.x * collisionResult.depth,
+                y: -collisionResult.normal.y * collisionResult.depth});
             }
             else
             {
-                half = 2;
+                entityA.move({x: -collisionResult.normal.x * collisionResult.depth / 2,
+                y: -collisionResult.normal.y * collisionResult.depth / 2 });
+                
+                entityB.move({x: collisionResult.normal.x * collisionResult.depth / 2,
+                y: collisionResult.normal.y * collisionResult.depth / 2 });
             }
-
-            const correction = {
-                x: -collisionResult.normal.x * collisionResult.depth / half,
-                y: -collisionResult.normal.y * collisionResult.depth / half 
-            };
-
-            const correctionB = {
-                x: collisionResult.normal.x * collisionResult.depth /half,
-                y: collisionResult.normal.y * collisionResult.depth /half
-            };
-
-            entityA.moveIfNotStatic(correction);
-            entityB.moveIfNotStatic(correctionB);
 
             this.impulseCorrection(entityA,entityB,collisionResult);
         }
@@ -165,12 +175,9 @@ export class PhysicsEngine
         const transformA = entityA.getComponent(Transform);
         const transformB = entityB.getComponent(Transform);
 
-        const contactList = [contactResult.contactOne, contactResult.contactTwo];
+        const contactList = contactResult ? [contactResult.contactOne, contactResult.contactTwo] : [];
 
         const impulses = [];
-
-        const raValues = [];
-        const rbValues = [];
 
         for (let i = 0; i < contactResult.rContactCount; i++) 
         {
@@ -203,6 +210,7 @@ export class PhysicsEngine
 
             const relativeVelocity = subtractVectors(velB, velA);
 
+            if(dotProduct(relativeVelocity, collisionResult.normal) > 0) return;
 
             let contactVelMagnitude = dotProduct(relativeVelocity, normal);
 
@@ -210,7 +218,6 @@ export class PhysicsEngine
             {
                 continue;
             }
-
 
             const raNormalDot = dotProduct(raNormal, normal);
             const rbNormalDot = dotProduct(rbNormal, normal);
@@ -231,9 +238,7 @@ export class PhysicsEngine
             }
 
             
-
             let denominator = (1 / bodyA.mass) + (1/bodyB.mass) + (raNormalDot * raNormalDot) * (1 / bodyA.rotationalInertia) + (rbNormalDot * rbNormalDot) * (1 / bodyB.rotationalInertia);            
-
 
             let j = -(1 + e) * contactVelMagnitude;
 
@@ -242,35 +247,47 @@ export class PhysicsEngine
 
             impulses.push({
                 j: j,
-                normal: normal
+                normal: normal,
+                ra: ra,
+                rb: rb
             });
-
-            raValues[i] = ra;
-            rbValues[i] = rb;
 
         }
 
         for (let i = 0; i < impulses.length; i++) 
         {
-            const currentImpulse = impulses[i];
+            const { j, normal, ra, rb } = impulses[i];
+
             const impulseVec = {
-                x: currentImpulse.normal.x * currentImpulse.j,
-                y: currentImpulse.normal.y * currentImpulse.j
+                x: normal.x * j,
+                y: normal.y * j
             };
+
+            if (!ra || !rb) 
+            {
+                console.warn(`Impulse at index ${i} is missing ra/rb`, impulses[i]);
+                continue;
+            }
 
             const FIX = 0.025;
 
-            bodyA.linearVelocity.x -= impulseVec.x * (1 / bodyA.mass);
-            bodyA.linearVelocity.y -= impulseVec.y * (1 / bodyA.mass);
-            bodyA.angularVelocity += -crossProduct(raValues[i], impulseVec) * (1 / bodyA.rotationalInertia) * FIX;
+            
 
-            bodyB.linearVelocity.x += impulseVec.x * (1 / bodyB.mass);
-            bodyB.linearVelocity.y += impulseVec.y * (1 / bodyB.mass);
-            bodyB.angularVelocity += crossProduct(rbValues[i], impulseVec) * (1 / bodyB.rotationalInertia) * FIX;
+            const invInertiaA = (bodyA.rotationalInertia === Infinity || bodyA.rotationalInertia === 0) ? 0 : (1 / bodyA.rotationalInertia);
+            const invInertiaB = (bodyB.rotationalInertia === Infinity || bodyB.rotationalInertia === 0) ? 0 : (1 / bodyB.rotationalInertia);
+
+
+            bodyA.linearVelocity.x -= impulseVec.x * bodyA.inverseMass;
+            bodyA.linearVelocity.y -= impulseVec.y * bodyA.inverseMass;
+            bodyA.angularVelocity += -crossProduct(ra, impulseVec) * invInertiaA;
+
+            bodyB.linearVelocity.x += impulseVec.x * bodyB.inverseMass;
+            bodyB.linearVelocity.y += impulseVec.y * bodyB.inverseMass;
+            bodyB.angularVelocity += crossProduct(rb, impulseVec) * invInertiaB;
         }       
     }
 
-    resolveCollisionsWRotations(entityA, entityB, ctx)
+    resolveCollisionsWRotations(entityA, entityB ,ctx = null)
     {
         if(!entityA.hasCollisions || !entityB.hasCollisions) return;
 
@@ -278,21 +295,30 @@ export class PhysicsEngine
 
         if(collisionResult.collision)
         {
+          
+            if(entityA.getComponent(Rigidbody).mass === Infinity && entityB.getComponent(Rigidbody).mass === Infinity)
+            {
+                return;
+            }
 
-            let half = 1;
+            if (entityA.getComponent(Rigidbody).mass === Infinity)
+            {
+                entityB.move({ x: collisionResult.normal.x * collisionResult.depth,
+                y: collisionResult.normal.y * collisionResult.depth});
+            }
+            else if (entityB.getComponent(Rigidbody).mass === Infinity)
+            {
+                entityA.move({x: -collisionResult.normal.x * collisionResult.depth,
+                y: -collisionResult.normal.y * collisionResult.depth});
+            }
+            else
+            {
+                entityA.move({x: -collisionResult.normal.x * collisionResult.depth / 2,
+                y: -collisionResult.normal.y * collisionResult.depth / 2 });
 
-            const correction = {
-                x: -collisionResult.normal.x * collisionResult.depth / half,
-                y: -collisionResult.normal.y * collisionResult.depth / half 
-            };
-
-            const correctionB = {
-                x: collisionResult.normal.x * collisionResult.depth /half,
-                y: collisionResult.normal.y * collisionResult.depth /half
-            };
-
-            entityA.moveIfNotStatic(correction);
-            entityB.moveIfNotStatic(correctionB);
+                entityB.move({x: collisionResult.normal.x * collisionResult.depth / 2,
+                y: collisionResult.normal.y * collisionResult.depth / 2 });
+            }
 
 
             let contactResult = findContactPointsPolygon(entityA,entityB);

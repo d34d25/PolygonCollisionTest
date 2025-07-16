@@ -111,6 +111,7 @@ export function dotProduct(a, b)
 
 export function crossProduct(a, b)
 {
+    //if (a === undefined || b === undefined) return 0;
     return a.x * b.y - a.y * b.x;
 }
 

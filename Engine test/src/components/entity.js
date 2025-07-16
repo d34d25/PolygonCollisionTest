@@ -106,6 +106,19 @@ export class Entity
         }
     }
 
+    cloneEntity() 
+    {
+        const clonedComponents = [];
+
+        for (const component of this.components.values()) {
+            // shallow copy component object properties
+            clonedComponents.push(Object.assign(Object.create(Object.getPrototypeOf(component)), component));
+        }
+
+        return new Entity(clonedComponents, this.hasCollisions);
+    }
+
+
     calculateRotationalInertia()
     {
         if(!(this.hasComponent(Polygon) || this.hasComponent(Circle)) && !this.hasComponent(Rigidbody))

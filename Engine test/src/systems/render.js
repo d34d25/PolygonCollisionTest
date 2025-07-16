@@ -24,3 +24,7 @@ export function drawPoint(ctx, point, color = 'red', radius = 15)
     ctx.fill();
 }
 
+function drawCircle()
+{
+
+}
