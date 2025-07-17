@@ -2,7 +2,7 @@ import { Vector2D } from "../utils/maths.js";
 
 export class Rigidbody
 {
-    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = 1, angularDamping = 1, rotationalInertia = 1, restitution = 0,  affectedByGravity = false)
+    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = {x: 1, y: 1}, angularDamping = 1, rotationalInertia = 1, restitution = 0,  affectedByGravity = false)
     {
         this.linearVelocity = linearVelocity;
         this.angularVelocity = angularVelocity;
@@ -57,7 +57,7 @@ export class Rigidbody
 
     addTorque(amount)
     {
-        this.torque = amount;
+        this.torque = amount * 10;
     }
     
 }

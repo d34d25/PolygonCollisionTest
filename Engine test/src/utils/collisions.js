@@ -1,3 +1,6 @@
+import { Rigidbody } from "../components/rigidbody.js";
+import { Circle } from "../components/shapes/circle.js";
+import { Polygon } from "../components/shapes/polygon.js";
 import { Transform } from "../components/transform.js";
 import { almostEqual, almostEqualVector, DEFAULT_MARGIN, dotProduct, projectVertices } from "./maths.js";
 
@@ -40,10 +43,11 @@ function pointSegmentDistance(point, segment)
 }
 
 
-export function findContactPointsPolygon(entityA, entityB) //out contact1, contact2, contactCount
+export function findContactPointsPolygon(manager ,entityA, entityB) //out contact1, contact2, contactCount
 {
-    let worldVerticesA = entityA.getWorldVertices();
-    let worldVerticesB = entityB.getWorldVertices();
+    
+    let worldVerticesA = manager.getWorldVertices(entityA);
+    let worldVerticesB = manager.getWorldVertices(entityB);
 
     let contact1 = {x:0, y:0};
     let contact2 = {x:0, y:0};
@@ -104,8 +108,14 @@ export function findContactPointsPolygon(entityA, entityB) //out contact1, conta
     return {contactOne: contact1, contactTwo: contact2, rContactCount: contactCount}; 
 }
 
-export function SAT(entityA, entityB)
+export function SAT(manager, entityA, entityB)
 {
+
+    if(canEntityBeTested(entityA) || canEntityBeTested(entityB))
+    {
+        return;
+    }
+
     let depth = Infinity;
 
     let normal = {x:0, y:0};
@@ -115,8 +125,8 @@ export function SAT(entityA, entityB)
 
     let direction = { x: 0, y: 0 };
 
-    let worldVerticesA = entityA.getWorldVertices();
-    let worldVerticesB = entityB.getWorldVertices();
+    let worldVerticesA = manager.getWorldVertices(entityA);
+    let worldVerticesB = manager.getWorldVertices(entityB);
 
     for (let i = 0; i < worldVerticesA.length; i++)
     {
@@ -222,7 +232,50 @@ export function SAT(entityA, entityB)
     return {collision: true, normal,depth};
 }
 
+
+export function circleVsPolygon(manager,entityA, entityB)
+{
+    if(canEntityBeTested(entityA) || canEntityBeTested(entityB))
+    {
+        return;
+    }
+    
+    const circleAPos = entityA.getComponent(Transform).position;
+    const circleARadius = entityA.getComponent(Circle).radius;
+
+    let worldVerticesB = manager.getWorldVertices(entityB);
+
+
+}
+
+export function circleVsCircle(entityA, entityB)
+{
+    if(canEntityBeTested(entityA) || canEntityBeTested(entityB))
+    {
+        return;
+    }
+
+    const dx = entityA.getComponent(Transform).position.x - entityB.getComponent(Transform).position.x;
+    const dy = entityA.getComponent(Transform).position.y - entityB.getComponent(Transform).position.y;
+
+    const distanceSquared = dx * dx + dy * dy;
+    const radiusSum = entityA.getComponent(Circle).radius + entityB.getComponent(Circle).radius;
+
+    return distanceSquared <= radiusSum * radiusSum;
+
+}
+
+
 export function AABBvsAABB(boxA, boxB)
 {
+    
+}
 
+
+function canEntityBeTested(entity)
+{
+    if (!((entity.hasComponent(Polygon) || entity.hasComponent(Circle)) && entity.hasComponent(Transform) && entity.hasComponent(Rigidbody))) 
+    {
+        console.warn("the entity has one of the required components missing (a polygon or a circle, a transform and a rigidbody)");
+    }
 }

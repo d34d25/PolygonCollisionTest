@@ -4,7 +4,7 @@ import { Input } from "./input.js";
 
 export class Player
 {
-    constructor(entity = new Entity(), moveSpeed = 50, rotationSpeed = 50)
+    constructor(entity = new Entity(), moveSpeed = 50, rotationSpeed = 200)
     {
         this.entity = entity;
         this.input = new Input();
@@ -46,7 +46,7 @@ export class Player
         this.entity.getComponent(Rigidbody).force.x += inputX * this.moveSpeed;
         this.entity.getComponent(Rigidbody).force.y += inputY * this.moveSpeed;
 
-        this.entity.getComponent(Rigidbody).torque += inputR * this.rotationSpeed;
+        this.entity.getComponent(Rigidbody).addTorque(inputR * this.rotationSpeed);
 
 
     }

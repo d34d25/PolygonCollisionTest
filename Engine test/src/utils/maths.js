@@ -168,3 +168,9 @@ export function almostEqualVector(va, vb, margin)
     return almostEqual(va.x, vb.x, margin) && almostEqual(va.y, vb.y, margin); 
 }
 
+export function distance(p1, p2) 
+{
+    const dx = p1.x - p2.x;
+    const dy = p1.y - p2.y;
+    return Math.sqrt(dx * dx + dy * dy);
+}

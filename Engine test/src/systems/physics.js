@@ -6,25 +6,23 @@ import { drawPoint } from "./render.js";
 
 export class PhysicsEngine
 {
-    constructor(entities = [], gravity = 9.8)
+    //refactor resolve collisions into one method
+    
+    constructor(entityManager, gravity = {x:0,y:9.8})
     {
-        this.entities = entities;
-        
+        this.entityManager = entityManager;
         this.gravity = gravity;
 
-        for (let entity of entities) 
-        {
-            this.warn(entity);
-        }
-
+        this.entities = this.entityManager.getAllPhysicalEntities();
     }
 
     update(dt)
     {
-        for (let entity of this.entities)
-        {
-            this.warn(entity);
 
+        this.entities = this.entityManager.getAllPhysicalEntities();
+
+        for (let entity of this.entities)
+        { 
             const transform = entity.getComponent(Transform);
             const rb = entity.getComponent(Rigidbody);
 
@@ -38,8 +36,7 @@ export class PhysicsEngine
 
             rb.angularVelocity += angularAcceleration * dt;
 
-            const angularDampingFactor = 1 - (rb.angularDamping ?? 0) * 0.01;
-            rb.angularVelocity *= angularDampingFactor;
+            rb.angularVelocity *= Math.exp(-rb.angularDamping * dt);
 
             if (Math.abs(rb.angularVelocity) < 0.1 * dt) rb.angularVelocity = 0;
 
@@ -51,7 +48,8 @@ export class PhysicsEngine
 
             if(rb.affectedByGravity && rb.mass != Infinity)
             {
-                rb.linearVelocity.y += this.gravity * dt;
+                rb.linearVelocity.x += this.gravity.x * dt;
+                rb.linearVelocity.y += this.gravity.y * dt;
             }
 
             let linearAccelerationX = 0;
@@ -66,19 +64,8 @@ export class PhysicsEngine
             rb.linearVelocity.x += linearAccelerationX * dt;
             rb.linearVelocity.y += linearAccelerationY * dt;
 
-            const dampingFactorX = Math.exp(-rb.linearDamping * dt);
-            rb.linearVelocity.x *= dampingFactorX;
-
-            let dampingFactorY;
-
-            if (!rb.affectedByGravity) 
-            {
-                dampingFactorY = Math.exp(-rb.linearDamping * dt);
-            } else {
-                dampingFactorY = Math.exp(-rb.linearDamping * 0.25 * dt);
-            }
-
-            rb.linearVelocity.y *= dampingFactorY;
+            rb.linearVelocity.x *= Math.exp(-rb.linearDamping.x * dt); 
+            rb.linearVelocity.y *= Math.exp(-rb.linearDamping.y * dt);
             
             if (rb.linearVelocity.magnitude() < 0.1 * dt) rb.linearVelocity = Vector2D.zero;
             
@@ -128,11 +115,11 @@ export class PhysicsEngine
         bodyB.linearVelocity.y += j /bodyB.mass * collisionResult.normal.y;
     }
 
-    resolveCollisionsBasic(entityA, entityB)
+    resolveCollisionsBasicPolygon(entityA, entityB)
     {
         if(!entityA.hasCollisions || !entityB.hasCollisions) return;
 
-        let collisionResult = SAT(entityA, entityB);
+        let collisionResult = SAT(this.entityManager ,entityA, entityB);
 
         if(collisionResult.collision)
         {
@@ -144,29 +131,26 @@ export class PhysicsEngine
 
             if (entityA.getComponent(Rigidbody).mass === Infinity)
             {
-                entityB.move({ x: collisionResult.normal.x * collisionResult.depth,
+                this.entityManager.move(entityB, { x: collisionResult.normal.x * collisionResult.depth,
                 y: collisionResult.normal.y * collisionResult.depth});
             }
             else if (entityB.getComponent(Rigidbody).mass === Infinity)
             {
-                entityA.move({x: -collisionResult.normal.x * collisionResult.depth,
+                this.entityManager.move(entityA,{x: -collisionResult.normal.x * collisionResult.depth,
                 y: -collisionResult.normal.y * collisionResult.depth});
             }
             else
             {
-                entityA.move({x: -collisionResult.normal.x * collisionResult.depth / 2,
+                this.entityManager.move(entityA, {x: -collisionResult.normal.x * collisionResult.depth / 2,
                 y: -collisionResult.normal.y * collisionResult.depth / 2 });
-                
-                entityB.move({x: collisionResult.normal.x * collisionResult.depth / 2,
+
+                this.entityManager.move(entityB, {x: collisionResult.normal.x * collisionResult.depth / 2,
                 y: collisionResult.normal.y * collisionResult.depth / 2 });
             }
 
             this.impulseCorrection(entityA,entityB,collisionResult);
         }
     }
-
-
-    
 
     applyCorrectionForces(entityA, entityB, collisionResult, contactResult)
     {
@@ -287,11 +271,11 @@ export class PhysicsEngine
         }       
     }
 
-    resolveCollisionsWRotations(entityA, entityB ,ctx = null)
+    resolveCollisionsWRotationsPolygon(entityA, entityB ,ctx = null)
     {
         if(!entityA.hasCollisions || !entityB.hasCollisions) return;
 
-        let collisionResult = SAT(entityA, entityB);
+        let collisionResult = SAT(this.entityManager ,entityA, entityB);
 
         if(collisionResult.collision)
         {
@@ -303,25 +287,25 @@ export class PhysicsEngine
 
             if (entityA.getComponent(Rigidbody).mass === Infinity)
             {
-                entityB.move({ x: collisionResult.normal.x * collisionResult.depth,
+                this.entityManager.move(entityB, { x: collisionResult.normal.x * collisionResult.depth,
                 y: collisionResult.normal.y * collisionResult.depth});
             }
             else if (entityB.getComponent(Rigidbody).mass === Infinity)
             {
-                entityA.move({x: -collisionResult.normal.x * collisionResult.depth,
+                this.entityManager.move(entityA,{x: -collisionResult.normal.x * collisionResult.depth,
                 y: -collisionResult.normal.y * collisionResult.depth});
             }
             else
             {
-                entityA.move({x: -collisionResult.normal.x * collisionResult.depth / 2,
+                this.entityManager.move(entityA, {x: -collisionResult.normal.x * collisionResult.depth / 2,
                 y: -collisionResult.normal.y * collisionResult.depth / 2 });
 
-                entityB.move({x: collisionResult.normal.x * collisionResult.depth / 2,
+                this.entityManager.move(entityB, {x: collisionResult.normal.x * collisionResult.depth / 2,
                 y: collisionResult.normal.y * collisionResult.depth / 2 });
             }
 
 
-            let contactResult = findContactPointsPolygon(entityA,entityB);
+            let contactResult = findContactPointsPolygon(this.entityManager,entityA,entityB);
 
             //this.logContactPoints(contactResult, ctx);
 
