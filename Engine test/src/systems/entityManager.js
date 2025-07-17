@@ -16,6 +16,11 @@ export class EntityManager
 
     getPolygonSize(entity)
     {
+        if(entity.hasComponent(Circle))
+        {
+            return;
+        }
+
         if(!entity.hasComponent(Polygon) || !entity.hasComponent(Transform))
         {
             console.warn("A Polygon and a Transform need to be attached")
@@ -100,6 +105,11 @@ export class EntityManager
 
     getWorldVertices(entity) 
     {
+        if(entity.hasComponent(Circle))
+        {
+            return [];
+        }
+        
         if (!entity.hasComponent(Polygon) || !entity.hasComponent(Transform)) 
         {
             console.warn(`Entity ${entity.id}: missing Polygon or Transform`);
@@ -157,7 +167,7 @@ export class EntityManager
     }
 
 
-    createPhysicalEntity(size = 20, shape = 'box' ,hasGravity = false)
+    createPhysicalEntity(size = 20, shape = 'box' ,hasGravity = false, staticEntity = false, rotates = true)
     {
 
         if (typeof size !== 'number' || size <= 0) 
@@ -171,9 +181,10 @@ export class EntityManager
         let isTriangle = shape === 'triangle';
         let isCircle = shape === 'circle';
 
-        const entity = new Entity([new Transform(), new Rigidbody()]);
+        const entity = new Entity([new Transform(), new Rigidbody(staticEntity)]);
         
         const rb = entity.getComponent(Rigidbody);
+        
 
         if( isBox || isTriangle)
         {
@@ -197,7 +208,15 @@ export class EntityManager
 
  
         rb.affectedByGravity = hasGravity;
-        rb.rotationalInertia = this.calculateRotationalInertia(entity);
+        
+        if(!rotates)
+        {
+            rb.rotationalInertia = Infinity;
+        }
+        else
+        {
+            rb.rotationalInertia = this.calculateRotationalInertia(entity);
+        }
 
         this.addEntity(entity);
 

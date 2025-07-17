@@ -2,7 +2,7 @@ import { Vector2D } from "../utils/maths.js";
 
 export class Rigidbody
 {
-    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = {x: 1, y: 1}, angularDamping = 1, rotationalInertia = 1, restitution = 0,  affectedByGravity = false)
+    constructor(isStatic = false, linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = {x: 1, y: 1}, angularDamping = 1, rotationalInertia = 1, restitution = 0,  affectedByGravity = false)
     {
         this.linearVelocity = linearVelocity;
         this.angularVelocity = angularVelocity;
@@ -19,6 +19,8 @@ export class Rigidbody
         this.restitution = restitution; //restitution is how bouncy it is
 
         this.affectedByGravity =  affectedByGravity; 
+
+        this.isStatic = isStatic;
     }
 
     get inverseMass()
@@ -27,11 +29,15 @@ export class Rigidbody
         else return 0;
     }
 
-
-    makeStatic()
+    freezeRotation()
     {
-        this.mass = Infinity;
         this.rotationalInertia = Infinity;
+    }
+
+    makeCompletelyStatic()
+    {
+        this.isStatic = true;
+        this.freezeRotation();
     }
 
     resetForce()

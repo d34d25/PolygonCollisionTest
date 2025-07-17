@@ -16,15 +16,11 @@ export function drawPolygon(ctx, vertices, fillStyle = 'blue')
     ctx.stroke();
 }
 
-export function drawPoint(ctx, point, color = 'red', radius = 15) 
+export function drawCircle(ctx, point, color = 'red', radius = 15) 
 {
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-}
-
-function drawCircle()
-{
-
+    ctx.stroke(); 
 }

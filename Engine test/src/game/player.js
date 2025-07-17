@@ -4,7 +4,7 @@ import { Input } from "./input.js";
 
 export class Player
 {
-    constructor(entity = new Entity(), moveSpeed = 50, rotationSpeed = 200)
+    constructor(entity, moveSpeed = 100, rotationSpeed = 200)
     {
         this.entity = entity;
         this.input = new Input();

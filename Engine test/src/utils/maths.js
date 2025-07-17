@@ -83,6 +83,29 @@ export class Vector2D
 
 }
 
+export function projectCircle(center, radius, axis)
+{
+    let min = 1;
+    let max = -1;
+
+    let dir = normalize(axis);
+    let dirAndRadius = scaleVector(dir, radius);
+
+    let p1 = addVectors(center, dirAndRadius);
+    let p2 = subtractVectors(center, dirAndRadius);
+
+    min = dotProduct(p1, dir);
+    max = dotProduct(p2, dir);
+
+    if(min > max)
+    {
+        let temp = max;
+        max = min;
+        min = temp;
+    }
+
+    return{min: min, max: max};
+}
 
 export function projectVertices(vertices, axis)
 {
@@ -123,6 +146,11 @@ export function addVectors(v1, v2)
 export function subtractVectors(v1, v2) 
 {
     return { x: v1.x - v2.x, y: v1.y - v2.y };
+}
+
+export function distance(v1,v2)
+{
+    return magnitude(subtractVectors(v1,v2));
 }
 
 export function multiplyVectors(a, b) 
@@ -168,9 +196,3 @@ export function almostEqualVector(va, vb, margin)
     return almostEqual(va.x, vb.x, margin) && almostEqual(va.y, vb.y, margin); 
 }
 
-export function distance(p1, p2) 
-{
-    const dx = p1.x - p2.x;
-    const dy = p1.y - p2.y;
-    return Math.sqrt(dx * dx + dy * dy);
-}

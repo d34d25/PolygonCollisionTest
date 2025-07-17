@@ -1,8 +1,10 @@
 import { crossProduct, dotProduct, subtractVectors, Vector2D } from "../utils/maths.js";
 import { Rigidbody } from "../components/rigidbody.js";
 import { Transform } from "../components/transform.js";
-import { findContactPointsPolygon, SAT } from "../utils/collisions.js";
-import { drawPoint } from "./render.js";
+import { circleVsCircle, circleVsPolygon, findContactPointsPolygon, SAT } from "../utils/collisions.js";
+import { drawCircle } from "./render.js";
+import { Polygon } from "../components/shapes/polygon.js";
+import { Circle } from "../components/shapes/circle.js";
 
 export class PhysicsEngine
 {
@@ -80,7 +82,21 @@ export class PhysicsEngine
         }
     }
 
-    impulseCorrection(entityA, entityB, collisionResult)
+
+    resolveCollisions(entityA, entityB, hasRotations = true , ctx = null)
+    {
+        if(hasRotations)
+        {
+            this.resolveCollisionsWRotations(entityA, entityB, ctx);
+        }
+        else
+        {
+            this.resolveCollisionsBasic(entityA, entityB);
+        }
+
+    }
+
+    impulseCorrection(entityA, entityB, collisionResult, entityAStatic, entityBStatic)
     {
         const bodyA = entityA.getComponent(Rigidbody);
         const bodyB = entityB.getComponent(Rigidbody);
@@ -91,11 +107,11 @@ export class PhysicsEngine
 
         let e;
 
-        if (bodyA.mass === Infinity) 
+        if (bodyA.mass === Infinity || entityAStatic ) 
         {
             e = bodyB.restitution;
         } 
-        else if (bodyB.mass === Infinity) 
+        else if (bodyB.mass === Infinity || entityBStatic) 
         {
             e = bodyA.restitution;
         } 
@@ -108,33 +124,60 @@ export class PhysicsEngine
 
         j /= (1 / bodyA.mass) + (1/bodyB.mass);
 
-        bodyA.linearVelocity.x -= j /bodyA.mass * collisionResult.normal.x; 
-        bodyA.linearVelocity.y -= j /bodyA.mass * collisionResult.normal.y; 
+        if(!entityAStatic)
+        {
+            bodyA.linearVelocity.x -= j /bodyA.mass * collisionResult.normal.x; 
+            bodyA.linearVelocity.y -= j /bodyA.mass * collisionResult.normal.y; 
+        }
+        
+        if(!entityBStatic)
+        {
+            bodyB.linearVelocity.x += j /bodyB.mass * collisionResult.normal.x; 
+            bodyB.linearVelocity.y += j /bodyB.mass * collisionResult.normal.y;
+        }
 
-        bodyB.linearVelocity.x += j /bodyB.mass * collisionResult.normal.x; 
-        bodyB.linearVelocity.y += j /bodyB.mass * collisionResult.normal.y;
+        
     }
 
-    resolveCollisionsBasicPolygon(entityA, entityB)
+    resolveCollisionsBasic(entityA, entityB)
     {
-        if(!entityA.hasCollisions || !entityB.hasCollisions) return;
+        let entityAStatic = entityA.getComponent(Rigidbody).isStatic || entityA.getComponent(Rigidbody).mass === Infinity;
+        let entityBStatic = entityB.getComponent(Rigidbody).isStatic || entityB.getComponent(Rigidbody).mass === Infinity;
 
-        let collisionResult = SAT(this.entityManager ,entityA, entityB);
+        if ((!entityA.hasCollisions || entityAStatic) && (!entityB.hasCollisions || entityBStatic)) 
+        {
+            return;
+        }
+
+        let collisionResult;
+
+        if(entityA.hasComponent(Polygon) && entityB.hasComponent(Polygon))
+        {
+            collisionResult = SAT(this.entityManager ,entityA, entityB);
+        }
+        else if(entityA.hasComponent(Circle) && entityB.hasComponent(Circle))
+        {
+            collisionResult = circleVsCircle(entityA,entityB);
+        }
+        else if (entityA.hasComponent(Circle) && entityB.hasComponent(Polygon))
+        {
+            collisionResult = circleVsPolygon(this.entityManager, entityA,entityB);
+        }
 
         if(collisionResult.collision)
         {
 
-            if(entityA.getComponent(Rigidbody).mass === Infinity && entityB.getComponent(Rigidbody).mass === Infinity)
+            if(entityAStatic && entityBStatic)
             {
                 return;
             }
 
-            if (entityA.getComponent(Rigidbody).mass === Infinity)
+            if (entityAStatic)
             {
                 this.entityManager.move(entityB, { x: collisionResult.normal.x * collisionResult.depth,
                 y: collisionResult.normal.y * collisionResult.depth});
             }
-            else if (entityB.getComponent(Rigidbody).mass === Infinity)
+            else if (entityBStatic)
             {
                 this.entityManager.move(entityA,{x: -collisionResult.normal.x * collisionResult.depth,
                 y: -collisionResult.normal.y * collisionResult.depth});
@@ -148,11 +191,11 @@ export class PhysicsEngine
                 y: collisionResult.normal.y * collisionResult.depth / 2 });
             }
 
-            this.impulseCorrection(entityA,entityB,collisionResult);
+            this.impulseCorrection(entityA,entityB,collisionResult, entityAStatic, entityBStatic);
         }
     }
 
-    applyCorrectionForces(entityA, entityB, collisionResult, contactResult)
+    applyCorrectionForces(entityA, entityB, collisionResult, contactResult, entityAStatic, entityBStatic)
     {
         const bodyA = entityA.getComponent(Rigidbody);
         const bodyB = entityB.getComponent(Rigidbody);
@@ -253,44 +296,67 @@ export class PhysicsEngine
                 continue;
             }
 
-            const FIX = 0.025;
-
-            
 
             const invInertiaA = (bodyA.rotationalInertia === Infinity || bodyA.rotationalInertia === 0) ? 0 : (1 / bodyA.rotationalInertia);
             const invInertiaB = (bodyB.rotationalInertia === Infinity || bodyB.rotationalInertia === 0) ? 0 : (1 / bodyB.rotationalInertia);
 
 
-            bodyA.linearVelocity.x -= impulseVec.x * bodyA.inverseMass;
-            bodyA.linearVelocity.y -= impulseVec.y * bodyA.inverseMass;
+            if(!entityAStatic)
+            {
+                bodyA.linearVelocity.x -= impulseVec.x * bodyA.inverseMass;
+                bodyA.linearVelocity.y -= impulseVec.y * bodyA.inverseMass;
+            }
+           
             bodyA.angularVelocity += -crossProduct(ra, impulseVec) * invInertiaA;
 
-            bodyB.linearVelocity.x += impulseVec.x * bodyB.inverseMass;
-            bodyB.linearVelocity.y += impulseVec.y * bodyB.inverseMass;
+            if(!entityBStatic)
+            {
+                bodyB.linearVelocity.x += impulseVec.x * bodyB.inverseMass;
+                bodyB.linearVelocity.y += impulseVec.y * bodyB.inverseMass;
+            }
+            
             bodyB.angularVelocity += crossProduct(rb, impulseVec) * invInertiaB;
         }       
-    }
+    }   
 
-    resolveCollisionsWRotationsPolygon(entityA, entityB ,ctx = null)
+    resolveCollisionsWRotations(entityA, entityB, ctx = null)
     {
         if(!entityA.hasCollisions || !entityB.hasCollisions) return;
 
-        let collisionResult = SAT(this.entityManager ,entityA, entityB);
+        let entityAStatic = entityA.getComponent(Rigidbody).isStatic;
+        let entityBStatic = entityB.getComponent(Rigidbody).isStatic;
+
+        let collisionResult;
+
+        if(entityA.hasComponent(Polygon) && entityB.hasComponent(Polygon))
+        {
+            collisionResult = SAT(this.entityManager ,entityA, entityB);
+        }
+        else if(entityA.hasComponent(Circle) && entityB.hasComponent(Circle))
+        {
+            collisionResult = circleVsCircle(entityA,entityB);
+        }
+        else if (entityA.hasComponent(Circle) && entityB.hasComponent(Polygon))
+        {
+            collisionResult = circleVsPolygon(this.entityManager, entityA,entityB);
+        }
+
+        
 
         if(collisionResult.collision)
         {
           
-            if(entityA.getComponent(Rigidbody).mass === Infinity && entityB.getComponent(Rigidbody).mass === Infinity)
+            if(entityAStatic && entityBStatic)
             {
                 return;
             }
 
-            if (entityA.getComponent(Rigidbody).mass === Infinity)
+            if (entityAStatic)
             {
                 this.entityManager.move(entityB, { x: collisionResult.normal.x * collisionResult.depth,
                 y: collisionResult.normal.y * collisionResult.depth});
             }
-            else if (entityB.getComponent(Rigidbody).mass === Infinity)
+            else if (entityBStatic)
             {
                 this.entityManager.move(entityA,{x: -collisionResult.normal.x * collisionResult.depth,
                 y: -collisionResult.normal.y * collisionResult.depth});
@@ -309,17 +375,16 @@ export class PhysicsEngine
 
             //this.logContactPoints(contactResult, ctx);
 
-            this.applyCorrectionForces(entityA,entityB,collisionResult, contactResult);
+            this.applyCorrectionForces(entityA,entityB,collisionResult, contactResult, entityAStatic, entityBStatic);
         }        
     }
-
 
     logContactPoints(contactResult, ctx)
     {
             if (ctx && contactResult.rContactCount >= 1)
-                drawPoint(ctx, contactResult.contactOne, 'red');
+                drawCircle(ctx, contactResult.contactOne, 'red');
             if (ctx && contactResult.rContactCount === 2)
-                drawPoint(ctx, contactResult.contactTwo, 'red');
+                drawCircle(ctx, contactResult.contactTwo, 'red');
     }
 
     warn(entity)
