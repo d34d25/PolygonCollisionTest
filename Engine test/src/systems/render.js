@@ -16,11 +16,21 @@ export function drawPolygon(ctx, vertices, fillStyle = 'blue')
     ctx.stroke();
 }
 
-export function drawCircle(ctx, point, color = 'red', radius = 15) 
+export function drawCircle(ctx, point, color = 'red', radius = 15, rotation) 
 {
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
     ctx.stroke(); 
+
+    const endX = point.x + Math.cos(rotation) * radius;
+    const endY = point.y + Math.sin(rotation) * radius;
+
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 }

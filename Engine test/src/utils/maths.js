@@ -125,18 +125,16 @@ export function projectVertices(vertices, axis)
     return { min, max };
 }
 
-export const DEFAULT_MARGIN = 0.0005;
-
 export function dotProduct(a, b)
 {
     return a.x * b.x + a.y * b.y;
 }
 
-export function crossProduct(a, b)
+export function crossProduct(a, b) 
 {
-    //if (a === undefined || b === undefined) return 0;
     return a.x * b.y - a.y * b.x;
 }
+
 
 export function addVectors(v1, v2) 
 {
@@ -193,6 +191,17 @@ export function almostEqual(a,b, margin)
 
 export function almostEqualVector(va, vb, margin)
 {
-    return almostEqual(va.x, vb.x, margin) && almostEqual(va.y, vb.y, margin); 
+    return distanceSquared(va,vb) < margin * margin;
 }
 
+export function distanceSquared(a,  b)
+{
+    let dx = a.x - b.x;
+    let dy = a.y - b.y;
+    return dx * dx + dy * dy;
+}
+
+export function LengthSquared(v)
+{
+    return v.x * v.x + v.y * v.y;
+}

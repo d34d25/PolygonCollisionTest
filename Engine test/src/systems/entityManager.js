@@ -166,8 +166,7 @@ export class EntityManager
         return localArea * Math.abs(sx * sy);
     }
 
-
-    createPhysicalEntity(size = 20, shape = 'box' ,hasGravity = false, staticEntity = false, rotates = true)
+    createPhysicalEntity(position ={x:0, y:0}, size = 20, rotation = 0 ,scale = {x:1,y:1} ,shape = 'box' ,hasGravity = false, staticEntity = false, rotates = true)
     {
 
         if (typeof size !== 'number' || size <= 0) 
@@ -181,13 +180,22 @@ export class EntityManager
         let isTriangle = shape === 'triangle';
         let isCircle = shape === 'circle';
 
-        const entity = new Entity([new Transform(), new Rigidbody(staticEntity)]);
+        const entity = new Entity([new Transform(position,rotation,scale), new Rigidbody()]);
         
         const rb = entity.getComponent(Rigidbody);
         
+        if (staticEntity)
+        {
+            rb.mass = Infinity;
+        }
 
         if( isBox || isTriangle)
         {
+            if(isTriangle)
+            {
+                size *= 2;
+            } 
+
             entity.addComponent(new Polygon());
 
             entityShape = entity.getComponent(Polygon);

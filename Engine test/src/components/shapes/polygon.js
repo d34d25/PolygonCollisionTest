@@ -2,7 +2,7 @@ import { Shape } from "./shape.js";
 
 export class Polygon extends Shape
 {
-    constructor(color = 'blue')
+    constructor(color = 'blue', shape = '')
     {
         super(color);
         this.localVertices = [];

@@ -2,8 +2,10 @@ import { Vector2D } from "../utils/maths.js";
 
 export class Rigidbody
 {
-    constructor(isStatic = false, linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = {x: 1, y: 1}, angularDamping = 1, rotationalInertia = 1, restitution = 0,  affectedByGravity = false)
+    constructor(linearVelocity = new Vector2D(0,0), angularVelocity = 0, force = new Vector2D(0,0), torque = 0 ,mass = 1, linearDamping = {x: 0.1, y: 0.1}, angularDamping = 1, rotationalInertia = 1, restitution = 0,  affectedByGravity = false)
     {
+        this.BASE_MASS_MULTIPLIER = 10;
+
         this.linearVelocity = linearVelocity;
         this.angularVelocity = angularVelocity;
 
@@ -18,16 +20,40 @@ export class Rigidbody
         this.mass = mass;
         this.restitution = restitution; //restitution is how bouncy it is
 
-        this.affectedByGravity =  affectedByGravity; 
-
-        this.isStatic = isStatic;
+        this.affectedByGravity =  affectedByGravity;
     }
 
     get inverseMass()
     {
-        if(this.mass != 0) return 1/ this.mass;
-        else return 0;
+        if (this.mass === Infinity || this.mass === 0) return 0;
+        return 1 / this.mass;
     }
+
+    get inverseRotateInertia()
+    {
+        return (this.rotationalInertia === Infinity || this.rotationalInertia === 0) ? 0 : (1 / this.rotationalInertia);
+    }
+
+    get isStatic() 
+    {
+        return this.mass === Infinity;
+    }
+
+    get hasRotation()
+    {
+        return this.inverseRotateInertia !== Infinity;
+    }
+
+    setMass(amount)
+    {
+        this.mass = amount;
+        console.log("Mass set to:", this.mass);
+    }
+
+    setInfiniteMass()
+    {
+        this.mass = Infinity;
+    }   
 
     freezeRotation()
     {
@@ -36,7 +62,7 @@ export class Rigidbody
 
     makeCompletelyStatic()
     {
-        this.isStatic = true;
+        this.setInfiniteMass();
         this.freezeRotation();
     }
 

@@ -1,44 +1,42 @@
 import { Rigidbody } from "../components/rigidbody.js";
 import { Circle } from "../components/shapes/circle.js";
 import { Polygon } from "../components/shapes/polygon.js";
+import { Shape } from "../components/shapes/shape.js";
 import { Transform } from "../components/transform.js";
-import { almostEqual, almostEqualVector, DEFAULT_MARGIN, distance, dotProduct, normalize, projectCircle, projectVertices, subtractVectors } from "./maths.js";
+import { addVectors, almostEqual, almostEqualVector, distance, distanceSquared, dotProduct, LengthSquared, normalize, projectCircle, projectVertices, scaleVector, subtractVectors } from "./maths.js";
 
+const DEFAULT_MARGIN = 0.005;//1 * (10 ** -26.5);//(10 ** -26.5);
 
-function pointSegmentDistance(point, segment) 
+function pointSegmentDistance(p, a, b) 
 {
-    const ax = segment.a.x;
-    const ay = segment.a.y;
-    const bx = segment.b.x;
-    const by = segment.b.y;
-    const px = point.x;
-    const py = point.y;
+    let ab = {x:b.x - a.x, y: b.y - a.y};
 
-    const abx = bx - ax;
-    const aby = by - ay;
-    const apx = px - ax;
-    const apy = py - ay;
+    let ap = {x: p.x - a.x, y: p.y - a.y};
 
-    const abLenSq = abx * abx + aby * aby;
+    let proj = dotProduct(ab, ap);
+    let abLenSq = LengthSquared(ab);
+    let d = proj / abLenSq;
 
-    // Project point onto the line (parametric t)
-    let t = (apx * abx + apy * aby) / abLenSq;
+    let cp;
 
-    // Clamp t to the segment [0, 1]
-    t = Math.max(0, Math.min(1, t));
+    if(d <= 0)
+    {
+        cp = a;
+    }
+    else if(d >= 1)
+    {
+        cp = b;
+    }
+    else
+    {
+        cp = addVectors(a, scaleVector(ab, d));
+    }
 
-    // Find closest point on the segment
-    const closestX = ax + t * abx;
-    const closestY = ay + t * aby;
-
-    // Compute squared distance from point to closest point
-    const dx = px - closestX;
-    const dy = py - closestY;
-    const distanceSqrd = dx * dx + dy * dy;
+    let distanceSqrd = distanceSquared(p, cp);
 
     return {
         distanceSqrd: distanceSqrd,
-        closestPoint: {x: closestX, y: closestY}
+        closestPoint: cp
     };
 }
 
@@ -64,15 +62,15 @@ function closestPointOnPolygon(circleCenter, vertices)
     
 }
 
-export function findContactPointsPolygon(manager ,entityA, entityB) //out contact1, contact2, contactCount
+function findContactPointsPolygon(manager ,entityA, entityB, contactResult) //out contact1, contact2, contactCount
 {
     
     let worldVerticesA = manager.getWorldVertices(entityA);
     let worldVerticesB = manager.getWorldVertices(entityB);
 
-    let contact1 = {x:0, y:0};
-    let contact2 = {x:0, y:0};
-    let contactCount = 0;
+    contactResult.contact1 = {x:0, y:0};
+    contactResult.contact2 = {x:0, y:0};
+    contactResult.rContactCount = 0;
 
     let minDistanceSq = Infinity;
 
@@ -94,31 +92,21 @@ export function findContactPointsPolygon(manager ,entityA, entityB) //out contac
                 let currentVertexB = worldVerticesB[j];
                 let nextVertexB = worldVerticesB[(j + 1) % worldVerticesB.length];
 
-                let segment = {
-                    a: currentVertexB,
-                    b: nextVertexB
-                };
-
-                let psd = pointSegmentDistance(currentVertexA, segment);
+                let psd = pointSegmentDistance(currentVertexA, currentVertexB, nextVertexB);
 
                 if(almostEqual(psd.distanceSqrd, minDistanceSq, DEFAULT_MARGIN))
                 {
-                    if (!almostEqualVector(psd.closestPoint, contact1, DEFAULT_MARGIN))
+                    if (!almostEqualVector(psd.closestPoint, contactResult.contact1, DEFAULT_MARGIN))
                     {
-                        contact2 = psd.closestPoint;
-                        contactCount = 2;
+                        contactResult.contact2 = psd.closestPoint;
+                        contactResult.contactCount = 2;
                     }
-                }
-                else if(psd.distanceSqrd === minDistanceSq)
-                {
-                    contact2 = psd.closestPoint;
-                    contactCount = 2;
                 }
                 else if(psd.distanceSqrd < minDistanceSq)
                 {
                     minDistanceSq = psd.distanceSqrd;
-                    contactCount = 1;
-                    contact1 = psd.closestPoint;
+                    contactResult.contactCount = 1;
+                    contactResult.contact1 = psd.closestPoint;
                 }
                 
             }
@@ -126,17 +114,60 @@ export function findContactPointsPolygon(manager ,entityA, entityB) //out contac
 
     }
     
-    return {contactOne: contact1, contactTwo: contact2, rContactCount: contactCount}; 
+    return {contactResult}; 
 }
 
-export function findContactPointsCircle()
+function findContactPointsCircle(entityA, entityB, contactResult)
 {
+    const centerA = entityA.getComponent(Transform).position;
+    const centerB = entityB.getComponent(Transform).position;
+    const radiusA = entityA.getComponent(Circle).radius;
 
+    let ab = subtractVectors(centerB,centerA);
+    let dir = normalize(ab);
+
+    let contactPoint = addVectors(centerA, scaleVector(dir,radiusA));
+
+    contactResult.contact1 = contactPoint;
+    contactResult.contactCount = 1;
+
+    return {contactResult};
 }
 
-export function findContactPointsPolygonCircle()
+
+function findContactPointsPolygonCircle(manager, entityA, entityB)
 {
     
+}
+
+export function findContactPoints(manager, entityA, entityB)
+{
+
+    let contactResult = {
+        contact1: {x: 0, y: 0},
+        contact2: {x: 0, y: 0},
+        contactCount: 0
+    };
+    
+    if(entityA.hasComponent(Polygon) && entityB.hasComponent(Polygon))
+    {
+        findContactPointsPolygon(manager, entityA, entityB, contactResult);
+    }
+    else if (entityA.hasComponent(Circle) && entityB.hasComponent(Circle))
+    {
+        findContactPointsCircle(entityA, entityB, contactResult);
+    }
+    else if (entityA.hasComponent(Polygon) && entityB.hasComponent(Circle))
+    {
+        findContactPointsPolygonCircle(manager, entityA, entityB);
+    }
+    else if (entityA.hasComponent(Circle) && entityB.hasComponent(Polygon))
+    {
+        findContactPointsPolygonCircle(manager, entityB, entityA);
+    }
+
+    return {contactOne: contactResult.contact1, contactTwo: contactResult.contact2, rContactCount: contactResult.contactCount}; 
+
 }
 
 export function SAT(manager, entityA, entityB)
