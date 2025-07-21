@@ -4,7 +4,7 @@ import { createBodyBox, createBodyCircle, createBodyTriangle } from "./rigidbody
 const canvas = document.getElementById('myCanvas');
 const ctx = canvas.getContext('2d');
 
-let box = createBodyBox({x:210, y: 400}, {w: 35, h: 35}, 1, 0.6, false, false);
+let box = createBodyBox({x:210, y: 400}, {w: 35, h: 35}, 1, 0.4, false, false);
 box.angle = 0;
 
 let box2 = createBodyTriangle({x:400, y: 50}, {w: 35, h: 35}, 1, 1, false);
@@ -13,7 +13,7 @@ box2.angle = 0;
 let triangle = createBodyTriangle({x:200, y: 540}, {w: 35, h: 35}, 0, 0,true);
 triangle.angle = 0.7;
 
-let floor = createBodyBox({x:200, y: 600}, {w: 70, h: 40}, 1 ,1, true, true);
+let floor = createBodyBox({x:200, y: 600}, {w: 2, h: 40}, 1 ,1, true, true);
 floor.angle = 0;
 let floor2 = createBodyBox({x:400, y: 100}, {w: 120, h: 40}, 1 ,1, true, true);
 floor2.angle = 0.1;

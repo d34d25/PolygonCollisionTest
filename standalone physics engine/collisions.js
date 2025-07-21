@@ -1,4 +1,4 @@
-import { dotProduct, subtractVectors, scaleVector, addVectors, almostEqual, almostEqualVector, lengthSquared, distanceSquared, distance } from "./maths.js";
+import { dotProduct, subtractVectors, scaleVector, addVectors, almostEqual, almostEqualVector, lengthSquared, distanceSquared, distance, normalize } from "./maths.js";
 import { Mainfold } from "./mainfold.js";
 
 export function SAT(bodyA, bodyB)
@@ -489,15 +489,15 @@ function pointSegmentDistance(p, a, b)
     };
 }
 
-function arePointsCollinear(P0, P1, P2) {
-    // Assuming P0, P1, P2 are objects with x and y properties (e.g., {x: 10, y: 20})
-    const x0 = P0.x, y0 = P0.y;
-    const x1 = P1.x, y1 = P1.y;
-    const x2 = P2.x, y2 = P2.y;
-    
-    // Calculate the cross product of vectors P0P1 and P0P2
-    const crossProduct = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
-    
-    const EPSILON = 1e-6;  // tolerance for floating point precision
-    return Math.abs(crossProduct) < EPSILON;
+export function areContactsAligned(contact1, contact2, normal) {
+    if (!contact1 || !contact2) return false;
+
+    let edge = subtractVectors(contact2, contact1);
+    let edgeLength = lengthSquared(edge);
+    if (edgeLength < 1e-6) return true;
+
+    let edgeNorm = normalize(edge);
+    let normalDot = Math.abs(dotProduct(edgeNorm, normal));
+
+    return normalDot < 0.1; // edge is almost perpendicular to the normal
 }

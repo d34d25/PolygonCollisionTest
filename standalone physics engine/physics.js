@@ -1,4 +1,4 @@
-import { circleVsCircle, circleVsPolygon, findContactPoints, SAT } from "./collisions.js";
+import { areContactsAligned, circleVsCircle, circleVsPolygon, findContactPoints, SAT } from "./collisions.js";
 import { addVectors, crossProduct, dotProduct, scaleVector, subtractVectors } from "./maths.js";
 import { Mainfold } from "./mainfold.js";
 
@@ -227,7 +227,7 @@ export class PhysWorld
 
             let j;
 
-            if(contactCount === 2)
+            if(contactCount === 2 && areContactsAligned(contact1,contact2,normal)) //(contactCount === 2 && areContactsAligned(contact1,contact2,normal))
             {
                 console.log("called");
 

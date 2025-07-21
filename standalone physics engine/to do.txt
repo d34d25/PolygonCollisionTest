@@ -1,0 +1,3 @@
+add friction
+add damping
+polish the update flow, so all the user has to do is add bodies to the physics world and call the step function
