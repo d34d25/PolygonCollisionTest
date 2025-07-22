@@ -4,16 +4,16 @@ import { createBodyBox, createBodyCircle, createBodyTriangle } from "./rigidbody
 const canvas = document.getElementById('myCanvas');
 const ctx = canvas.getContext('2d');
 
-let box = createBodyBox({x:210, y: 400}, {w: 35, h: 35}, 1, 0.4, false, false);
+let box = createBodyBox({x:210, y: 400}, {w: 35, h: 35}, 1, 0.4, false);
 box.angle = 0;
 
-let box2 = createBodyTriangle({x:400, y: 50}, {w: 35, h: 35}, 1, 1, false);
+let box2 = createBodyTriangle({x:400, y: 50}, {w: 70, h: 30}, 1, 0.6, false);
 box2.angle = 0;
 
-let triangle = createBodyTriangle({x:200, y: 540}, {w: 35, h: 35}, 0, 0,true);
+let triangle = createBodyTriangle({x:200, y: 240}, {w: 35, h: 35},1, 0,false);
 triangle.angle = 0.7;
 
-let floor = createBodyBox({x:200, y: 600}, {w: 2, h: 40}, 1 ,1, true, true);
+let floor = createBodyBox({x:100, y: 600}, {w: 2, h: 40}, 1 ,1, true, true);
 floor.angle = 0;
 let floor2 = createBodyBox({x:400, y: 100}, {w: 120, h: 40}, 1 ,1, true, true);
 floor2.angle = 0.1;
@@ -25,10 +25,8 @@ const FIXED_TIMESTEP = 1 / 144;
 
 const phys = new PhysWorld([box,triangle, floor, box2 ,floor2, floor3, theFloor], {x:0, y:9.8 * 2});
 
-
 let lastTime = 0;
 let accumulator = 0;
-
 
 function gameLoop(timestamp) 
 {
@@ -45,20 +43,7 @@ function gameLoop(timestamp)
 
         for (let i = 0; i < 3; i++) 
         {
-
-
-            phys.step(ctx,FIXED_TIMESTEP, true);
-            phys.collisionStep(ctx, box,floor, true);
-            phys.collisionStep(ctx, box2,floor, true);
-            
-            //phys.collisionStep(ctx, box,triangle, true);
-
-            phys.collisionStep(ctx, box2,floor, true);
-            phys.collisionStep(ctx, box,floor2, true);
-
-            phys.collisionStep(ctx, box,floor3, true);
-
-            phys.collisionStep(ctx, box,theFloor, true);
+            phys.step(ctx, FIXED_TIMESTEP, true);
         }
 
         accumulator -= FIXED_TIMESTEP;

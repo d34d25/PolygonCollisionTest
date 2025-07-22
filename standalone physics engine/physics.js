@@ -24,6 +24,22 @@ export class PhysWorld
         for (let body of this.bodies) {
             body.updateBody(dt, this.gravity);
         }
+
+        const n = this.bodies.length;
+
+        for(let i = 0; i < n; i++)
+        {
+            for(let j = i + 1; j < n; j++)
+            {
+                const bodyA = this.bodies[i];
+                const bodyB = this.bodies[j];
+
+
+                if(bodyA.isStatic && bodyB.isStatic) continue;
+
+                this.collisionStep(ctx, bodyA,bodyB, useRotations);
+            }
+        }
     }
 
     collisionStep(ctx, bodyA, bodyB, useRotations)
@@ -239,7 +255,7 @@ export class PhysWorld
 
                 j /= contactCount;
 
-                console.log("j", j);
+                console.log("j linear: ", j);
             }
             else
             {
@@ -248,6 +264,8 @@ export class PhysWorld
                 j /= denominator;
 
                 j /= contactCount;
+
+                console.log("j rotational: ", j);
             }
 
             let impulse = {x:0, y:0};
