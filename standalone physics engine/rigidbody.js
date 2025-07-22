@@ -8,6 +8,7 @@ export class Rigidbody
         this.angularVelocity = 0;
 
         this.linearDamping =  {x:0,y:0};
+
         this.angularDamping = 0;
 
         this.mass = 1;
@@ -26,6 +27,7 @@ export class Rigidbody
 
         this.isStatic = isStatic;
         this.rotates = rotates;
+        this.affectedByGravity = true;
 
         this.type = "";
         this.types = ["box", "triangle", "circle"];
@@ -154,16 +156,30 @@ export class Rigidbody
 
         let acceleration = {x: 0, y:0};
 
-        acceleration.x += this.force.x;
-        acceleration.y += this.force.y;
+        let angularAcceleration = 0;
 
-        this.linearVelocity.x += gravity.x * time;
-        this.linearVelocity.y += gravity.y * time;
+        acceleration.x += this.force.x / this.mass;
+        acceleration.y += this.force.y / this.mass;
+
+        if(this.affectedByGravity)
+        {
+            acceleration.x += gravity.x;
+            acceleration.y += gravity.y;
+        }
+       
+        this.linearVelocity.x += acceleration.x * time;
+        this.linearVelocity.y += acceleration.y * time;     
+
+        this.linearVelocity.x *= Math.pow(1 - this.linearDamping.x, time);
+        this.linearVelocity.y *= Math.pow(1 - this.linearDamping.y, time);
 
         this.position.x += this.linearVelocity.x * time;
         this.position.y += this.linearVelocity.y * time;
 
+        angularAcceleration += this.torque / this.inertia;
+        this.angularVelocity += angularAcceleration;
         this.angle += this.angularVelocity * time;
+        this.angularVelocity *= Math.pow(1 -this.angularDamping, time);
 
         this.force.x = 0;
         this.force.y = 0;
@@ -171,6 +187,8 @@ export class Rigidbody
 
 }
 
+//this.linearVelocity.x += gravity.x * time;
+//this.linearVelocity.y += gravity.y * time;
 
 // force = mass * acc
 // acc = force / mass;
@@ -179,9 +197,10 @@ export class Rigidbody
 //this.linearVelocity += acceleration * time;
 
 
-export function createBodyBox(position = {x:0, y:0}, size = {w:10,h:10}, density = 1, restitution = 0.5, isStatic = false, rotate = false)
+export function createBodyBox({position = {x:0, y:0},size = {w:10, h:10},density = 1,restitution = 0.5,linearDamping = {x:0, y:0},
+    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true} = {})
 {
-    const body = new Rigidbody(position,density ,restitution, isStatic, rotate);
+    const body = new Rigidbody(position,density ,restitution, isStatic, noRotation);
     body.size = size;
     const area = body.size.w * body.size.h;
 
@@ -189,6 +208,11 @@ export function createBodyBox(position = {x:0, y:0}, size = {w:10,h:10}, density
 
     body.mass = Infinity;
     body.inertia = Infinity;
+
+    body.linearDamping = linearDamping;
+    body.angularDamping = angularDamping;
+
+    body.affectedByGravity = affectedByGravity;
 
     if(!body.isStatic)
     {
@@ -199,9 +223,10 @@ export function createBodyBox(position = {x:0, y:0}, size = {w:10,h:10}, density
     return body;
 }
 
-export function createBodyTriangle(position = {x:0, y:0}, size = {w:10,h:10}, density = 1, restitution = 0.5, isStatic = false)
+export function createBodyTriangle({position = {x:0, y:0},size = {w:10, h:10},density = 1,restitution = 0.5,linearDamping = {x:0, y:0},
+    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true} = {})
 {
-    const body = new Rigidbody(position, density, restitution, isStatic);
+    const body = new Rigidbody(position, density, restitution, isStatic, noRotation);
     body.size = size;
     body.createTriangle();
 
@@ -210,6 +235,11 @@ export function createBodyTriangle(position = {x:0, y:0}, size = {w:10,h:10}, de
 
     const base = body.size.w;
     const height = body.size.h;
+
+    body.linearDamping = linearDamping;
+    body.angularDamping = angularDamping;
+
+    body.affectedByGravity = affectedByGravity;
 
     if(!body.isStatic)
     {
@@ -221,15 +251,21 @@ export function createBodyTriangle(position = {x:0, y:0}, size = {w:10,h:10}, de
     return body;
 }   
 
-export function createBodyCircle(position, radius = 5,  density = 1, restitution = 0.5, isStatic = false)
+export function createBodyCircle({position = {x:0, y:0},radius = 10,density = 1,restitution = 0.5,linearDamping = {x:0, y:0},
+    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true} = {})
 {
-    const body = new Rigidbody(position, density, restitution, isStatic);
+    const body = new Rigidbody(position, density, restitution, isStatic, noRotation);
     body.radius = radius;
 
     body.createCircle();
 
     body.mass = Infinity;
     body.inertia = Infinity;
+
+    body.linearDamping = linearDamping;
+    body.angularDamping = angularDamping;
+
+    body.affectedByGravity = affectedByGravity;
 
     if(!body.isStatic)
     {

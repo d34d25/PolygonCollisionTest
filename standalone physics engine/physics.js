@@ -34,7 +34,6 @@ export class PhysWorld
                 const bodyA = this.bodies[i];
                 const bodyB = this.bodies[j];
 
-
                 if(bodyA.isStatic && bodyB.isStatic) continue;
 
                 this.collisionStep(ctx, bodyA,bodyB, useRotations);
@@ -62,7 +61,7 @@ export class PhysWorld
                 contacts.contactCount
             );
 
-            this.logContactPoints(ctx, manifold);
+            //this.logContactPoints(ctx, manifold);
 
             if(useRotations)
             {
