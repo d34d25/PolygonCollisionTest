@@ -8,8 +8,10 @@ export class Rigidbody
         this.angularVelocity = 0;
 
         this.linearDamping =  {x:0,y:0};
-
         this.angularDamping = 0;
+
+        this.staticFriction = 0.6;
+        this.dynamicFriction = 0.4;
 
         this.mass = 1;
         this.force =  {x:0,y:0};
@@ -198,7 +200,7 @@ export class Rigidbody
 
 
 export function createBodyBox({position = {x:0, y:0},size = {w:10, h:10},density = 1,restitution = 0.5,linearDamping = {x:0, y:0},
-    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true} = {})
+    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true, dynamicFriction = 0.4, staticFriction = 0.6} = {})
 {
     const body = new Rigidbody(position,density ,restitution, isStatic, noRotation);
     body.size = size;
@@ -212,6 +214,9 @@ export function createBodyBox({position = {x:0, y:0},size = {w:10, h:10},density
     body.linearDamping = linearDamping;
     body.angularDamping = angularDamping;
 
+    body.staticFriction = staticFriction;
+    body.dynamicFriction = dynamicFriction;
+
     body.affectedByGravity = affectedByGravity;
 
     if(!body.isStatic)
@@ -224,7 +229,7 @@ export function createBodyBox({position = {x:0, y:0},size = {w:10, h:10},density
 }
 
 export function createBodyTriangle({position = {x:0, y:0},size = {w:10, h:10},density = 1,restitution = 0.5,linearDamping = {x:0, y:0},
-    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true} = {})
+    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true, dynamicFriction = 0.4, staticFriction = 0.6} = {})
 {
     const body = new Rigidbody(position, density, restitution, isStatic, noRotation);
     body.size = size;
@@ -239,6 +244,9 @@ export function createBodyTriangle({position = {x:0, y:0},size = {w:10, h:10},de
     body.linearDamping = linearDamping;
     body.angularDamping = angularDamping;
 
+    body.staticFriction = staticFriction;
+    body.dynamicFriction = dynamicFriction;
+
     body.affectedByGravity = affectedByGravity;
 
     if(!body.isStatic)
@@ -252,7 +260,7 @@ export function createBodyTriangle({position = {x:0, y:0},size = {w:10, h:10},de
 }   
 
 export function createBodyCircle({position = {x:0, y:0},radius = 10,density = 1,restitution = 0.5,linearDamping = {x:0, y:0},
-    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true} = {})
+    angularDamping = 0,isStatic = false,noRotation = false, affectedByGravity = true, dynamicFriction = 0.4, staticFriction = 0.6} = {})
 {
     const body = new Rigidbody(position, density, restitution, isStatic, noRotation);
     body.radius = radius;
@@ -264,6 +272,15 @@ export function createBodyCircle({position = {x:0, y:0},radius = 10,density = 1,
 
     body.linearDamping = linearDamping;
     body.angularDamping = angularDamping;
+
+    if(dynamicFriction > staticFriction)
+    {
+        console.warn("Static friction should be higher than dynamic friction");
+    }
+
+    body.staticFriction = staticFriction;
+    body.dynamicFriction = dynamicFriction;
+    
 
     body.affectedByGravity = affectedByGravity;
 

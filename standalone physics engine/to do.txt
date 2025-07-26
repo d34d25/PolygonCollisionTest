@@ -1,0 +1,4 @@
+circle vs circle DONE
+circle vs polygon DONE
+friction DONE
+optimization

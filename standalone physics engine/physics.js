@@ -1,5 +1,5 @@
 import { areContactsAligned, circleVsCircle, circleVsPolygon, findContactPoints, SAT } from "./collisions.js";
-import { addVectors, crossProduct, dotProduct, scaleVector, subtractVectors } from "./maths.js";
+import { addVectors, almostEqualVector, crossProduct, dotProduct, multiplyVectors, normalize, scaleVector, subtractVectors } from "./maths.js";
 import { Mainfold } from "./mainfold.js";
 
 export class PhysWorld
@@ -16,11 +16,13 @@ export class PhysWorld
         this.rbList = [];
 
         this.impulseList = [];
+        this.frictionImpulseList = [];
+        this.jList = [];
     }
 
     step(ctx, dt, useRotations = false) 
     {
-        // 1. Integrate bodies with gravity
+
         for (let body of this.bodies) {
             body.updateBody(dt, this.gravity);
         }
@@ -61,11 +63,11 @@ export class PhysWorld
                 contacts.contactCount
             );
 
-            //this.logContactPoints(ctx, manifold);
+            this.logContactPoints(ctx, manifold);
 
             if(useRotations)
             {
-                this.resolveCollisionsRotational(manifold);
+                this.resolveCollisionsRotationalAndFriction(manifold);
             }
             else
             {
@@ -97,7 +99,7 @@ export class PhysWorld
 
         let result = null;
 
-        if ((bodyA.isBox || bodyA.isTriangle) && (bodyB.isBox || bodyB.isTriangle))
+        if (!bodyA.isCircle && !bodyB.isCircle)
         {
             result = SAT(bodyA,bodyB);
         }
@@ -105,11 +107,11 @@ export class PhysWorld
         {
             result = circleVsCircle(bodyA, bodyB);
         }
-        else if ((bodyA.isBox || bodyA.isTriangle) && bodyB.isCircle)
+        else if (!bodyA.isCircle && bodyB.isCircle)
         {
             result = circleVsPolygon(bodyB,bodyA);
         }
-        else if ((bodyB.isBox || bodyB.isTriangle) && bodyA.isCircle)
+        else if (!bodyB.isCircle && bodyA.isCircle)
         {
             result = circleVsPolygon(bodyA,bodyB);
         }
@@ -238,13 +240,13 @@ export class PhysWorld
             (raPerpDotN * raPerpDotN) * bodyA.invInertia + 
             (rbPerpDotN * rbPerpDotN) * bodyB.invInertia;
 
-            console.log("contacts", contactCount);
+            //console.log("contacts", contactCount);
 
             let j;
 
             if(contactCount === 2 && areContactsAligned(contact1,contact2,normal)) //(contactCount === 2 && areContactsAligned(contact1,contact2,normal))
             {
-                console.log("called");
+                //console.log("called");
 
                 relativeVel = subtractVectors(bodyB.linearVelocity, bodyA.linearVelocity);
 
@@ -254,7 +256,7 @@ export class PhysWorld
 
                 j /= contactCount;
 
-                console.log("j linear: ", j);
+                //console.log("j linear: ", j);
             }
             else
             {
@@ -264,7 +266,7 @@ export class PhysWorld
 
                 j /= contactCount;
 
-                console.log("j rotational: ", j);
+                //console.log("j rotational: ", j);
             }
 
             let impulse = {x:0, y:0};
@@ -305,6 +307,257 @@ export class PhysWorld
             if(!bodyB.rotates)
             {
                 bodyB.angularVelocity += crossProduct(rb, impulse) * bodyB.invInertia;
+            }
+            
+        }
+    }
+
+    resolveCollisionsRotationalAndFriction(manifold)
+    {
+        const bodyA = manifold.bodyA;
+        const bodyB = manifold.bodyB;
+        const normal =  manifold.normal
+
+        const contact1 = manifold.contact1;
+        const contact2 = manifold.contact2;
+        const contactCount = manifold.contactCount;
+
+        let e = 0;
+
+        if(bodyA.mass === Infinity  || bodyA.isStatic)
+        {
+            e = bodyB.restitution;
+        }
+        else if (bodyB.mass === Infinity  || bodyB.isStatic)
+        {
+            e = bodyA.restitution;
+        }
+        else
+        {
+            e = Math.min(bodyA.restitution,bodyB.restitution);
+        }
+
+        //let sf = (bodyA.staticFriction + bodyB.staticFriction) * 0.5;
+        //let df = (bodyA.dynamicFriction + bodyB.dynamicFriction) * 0.5;
+
+        let sf = Math.sqrt(bodyA.staticFriction * bodyB.staticFriction);
+        let df = Math.sqrt(bodyA.dynamicFriction * bodyB.dynamicFriction);
+
+
+        let contactList = [contact1, contact2];
+
+        for(let i = 0; i < contactCount; i++)
+        {
+            this.impulseList[i] = {x:0,y:0};
+            this.frictionImpulseList[i] = {x:0,y:0};
+            this.jList[i] = 0;
+            this.raList[i] = {x: 0, y: 0};
+            this.rbList[i] = {x: 0, y: 0};
+        }
+
+        for(let i = 0; i < contactCount; i++)
+        {
+            let ra = {x: 0, y: 0};
+            let rb = {x: 0, y: 0};
+
+            ra = subtractVectors(contactList[i], bodyA.position);
+            rb = subtractVectors(contactList[i], bodyB.position);
+
+            this.raList[i] = ra;
+            this.rbList[i] = rb;
+
+            let raPerp = {x: -ra.y, y: ra.x};
+            let rbPerp = {x: -rb.y, y: rb.x};
+
+            let angularLinearVelA = scaleVector(raPerp, bodyA.angularVelocity);
+            let angularLinearVelB = scaleVector(rbPerp, bodyB.angularVelocity);
+
+            let relativeVel = subtractVectors(
+                addVectors(bodyB.linearVelocity, angularLinearVelB),
+                addVectors(bodyA.linearVelocity, angularLinearVelA)
+            );
+
+            let contactVelocityMag = dotProduct(relativeVel, normal);
+
+            if (contactVelocityMag > 0) continue;
+
+            let raPerpDotN = dotProduct(raPerp, normal);
+            let rbPerpDotN = dotProduct(rbPerp, normal);
+
+            let denominator = bodyA.invMass + bodyB.invMass + 
+            (raPerpDotN * raPerpDotN) * bodyA.invInertia + 
+            (rbPerpDotN * rbPerpDotN) * bodyB.invInertia;
+
+
+            let j;
+
+            if(contactCount === 2 && areContactsAligned(contact1,contact2,normal))
+            {
+
+                relativeVel = subtractVectors(bodyB.linearVelocity, bodyA.linearVelocity);
+
+                j = -(1 +e ) * dotProduct(relativeVel, normal);
+                
+                j /= bodyA.invMass + bodyB.invMass;
+
+                j /= contactCount;
+
+            }
+            else
+            {
+                j = -(1 + e) * contactVelocityMag;
+
+                j /= denominator;
+
+                j /= contactCount;
+
+            }
+
+            this.jList[i] = j;
+
+            let impulse = {x:0, y:0};
+
+            impulse.x = j * normal.x;
+            impulse.y = j * normal.y;
+
+            this.impulseList[i] = impulse;
+        }
+
+
+        for(let i = 0; i < contactCount; i++)
+        {
+            let impulse = this.impulseList[i];
+
+            let ra = this.raList[i];
+            let rb = this.rbList[i];
+
+            if(!bodyA.isStatic)
+            {
+                bodyA.linearVelocity.x += -impulse.x * bodyA.invMass;
+                bodyA.linearVelocity.y += -impulse.y * bodyA.invMass;
+                
+            }
+
+            if(!bodyA.rotates)
+            {
+                bodyA.angularVelocity += -crossProduct(ra, impulse) * bodyA.invInertia;
+            }
+
+            if(!bodyB.isStatic)
+            {
+                bodyB.linearVelocity.x += impulse.x * bodyB.invMass;
+                bodyB.linearVelocity.y += impulse.y * bodyB.invMass;
+                
+            }
+        
+            if(!bodyB.rotates)
+            {
+                bodyB.angularVelocity += crossProduct(rb, impulse) * bodyB.invInertia;
+            }
+            
+        }
+
+        //friction
+        for(let i = 0; i < contactCount; i++)
+        {
+            let ra = {x: 0, y: 0};
+            let rb = {x: 0, y: 0};
+
+            ra = subtractVectors(contactList[i], bodyA.position);
+            rb = subtractVectors(contactList[i], bodyB.position);
+
+            this.raList[i] = ra;
+            this.rbList[i] = rb;
+
+            let raPerp = {x: -ra.y, y: ra.x};
+            let rbPerp = {x: -rb.y, y: rb.x};
+
+            let angularLinearVelA = scaleVector(raPerp, bodyA.angularVelocity);
+            let angularLinearVelB = scaleVector(rbPerp, bodyB.angularVelocity);
+
+            let relativeVel = subtractVectors(
+                addVectors(bodyB.linearVelocity, angularLinearVelB),
+                addVectors(bodyA.linearVelocity, angularLinearVelA)
+            );
+
+            let dot = dotProduct(relativeVel, normal);
+            let tangent = subtractVectors(relativeVel, scaleVector(normal, dot));
+
+
+            if(almostEqualVector(tangent, {x:0,y:0}))
+            {
+                continue;
+            }
+            else
+            {
+                tangent = normalize(tangent);
+            }
+            
+            let raPerpDotT = dotProduct(raPerp, tangent);
+            let rbPerpDotT = dotProduct(rbPerp, tangent);
+
+            let denominator = bodyA.invMass + bodyB.invMass + 
+            (raPerpDotT * raPerpDotT) * bodyA.invInertia + 
+            (rbPerpDotT * rbPerpDotT) * bodyB.invInertia;
+
+
+            let j = this.jList[i];
+
+            let jt = 0;
+
+            jt = -dotProduct(relativeVel, tangent);
+
+            jt /= denominator;
+
+            jt /= contactCount;
+
+            let frictionImpulse = {x:0, y:0};
+           
+            if(Math.abs(jt) <= j * sf)
+            {
+                frictionImpulse.x = jt * tangent.x;
+                frictionImpulse.y = jt * tangent.y;
+            }
+            else
+            {
+                frictionImpulse.x = -j * tangent.x * df;
+                frictionImpulse.y = -j * tangent.y * df;
+            }
+
+
+            this.frictionImpulseList[i] = frictionImpulse;
+        }
+
+
+        for(let i = 0; i < contactCount; i++)
+        {
+            let frictionImpulse = this.frictionImpulseList[i];
+
+            let ra = this.raList[i];
+            let rb = this.rbList[i];
+
+
+            if(!bodyA.isStatic)
+            {
+                bodyA.linearVelocity.x += -frictionImpulse.x * bodyA.invMass;
+                bodyA.linearVelocity.y += -frictionImpulse.y * bodyA.invMass;
+            }
+            
+            if(!bodyA.rotates)
+            {
+                bodyA.angularVelocity += -crossProduct(ra, frictionImpulse) * bodyA.invInertia;
+            }
+            
+
+            if(!bodyB.isStatic)
+            {
+                bodyB.linearVelocity.x += frictionImpulse.x * bodyB.invMass;
+                bodyB.linearVelocity.y += frictionImpulse.y * bodyB.invMass;
+            }
+            
+            if(!bodyB.rotates)
+            {
+                bodyB.angularVelocity += crossProduct(rb, frictionImpulse) * bodyB.invInertia;
             }
             
         }
@@ -366,13 +619,13 @@ export class PhysWorld
         };
 
         if (ctx && contacts.contactCount >= 1) {
-            this.drawCircle(ctx, contacts.contact1, 'green', 6, 0);
-            drawNormal(contacts.contact1, contacts.normal, 'blue');
+            this.drawCircle(ctx, contacts.contact1, 'yellow', 10, 0);
+            drawNormal(contacts.contact1, contacts.normal, 'black');
         }
 
         if (ctx && contacts.contactCount === 2) {
-            this.drawCircle(ctx, contacts.contact2, 'green', 6, 0);
-            drawNormal(contacts.contact2, contacts.normal, 'blue');
+            this.drawCircle(ctx, contacts.contact2, 'yellow', 10, 0);
+            drawNormal(contacts.contact2, contacts.normal, 'black');
         }
     }
 

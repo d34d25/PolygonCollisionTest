@@ -31,23 +31,24 @@ const canvas = document.getElementById('myCanvas');
 const ctx = canvas.getContext('2d');
 
 let box = createBodyBox({position: {x: 210, y: 400}, size: {w: 35, h:35}, density: 1, restitution: 0.6,affectedByGravity: true});
-box.angle = 1;
+box.angle = 0;
 
-let box2 = createBodyTriangle({position: {x: 400, y: 50}, size: {w: 70, h:30}, density: 1, restitution: 0.6});
+let box2 = createBodyTriangle({position: {x: 210, y: 550}, size: {w: 70, h:30}, density: 1, restitution: 0.6 ,isStatic: true, noRotation: true});
 box2.angle = 0;
 
-let triangle = createBodyTriangle({position: {x: 500, y: 240}, size: {w: 35, h:35}, density: 1, restitution: 0.6});
-triangle.angle = 0.7;
+let triangle = createBodyBox({position: {x: 500, y: 240}, size: {w: 35, h:35}, density: 1, restitution: 0.6, staticFriction:0.2, dynamicFriction:0.1});
+triangle.angle = 0.1;
 
-let floor = createBodyBox({position: {x: 100, y: 600}, size: {w: 2, h:35}, density: 1, restitution: 0, isStatic:true, noRotation: true});
+let floor = createBodyBox({position: {x: 210, y: 600}, size: {w: 1, h:35}, density: 1, restitution: 0, isStatic:true, noRotation: true});
 floor.angle = 0;
 
 let floor2 = createBodyBox({position: {x: 400, y: 100}, size: {w: 120, h:40}, density: 1, restitution: 0,isStatic:true, noRotation: true});
 floor2.angle = 0.1;
 
-let floor3 = createBodyBox({position: {x: 600, y: 500}, size: {w: 120, h:40}, density: 1, restitution: 0,isStatic:true, noRotation: true});
+let floor3 = createBodyBox({position: {x: 600, y: 500}, size: {w: 120, h:40}, density: 1, restitution: 0,isStatic:true, noRotation: true, staticFriction:0, dynamicFriction:0});
+floor3.angle = -0.1;
 
-let theFloor = createBodyBox({position: {x: 720/2, y: 640}, size: {w: 720, h:40}, density: 1, restitution: 0,isStatic:true, noRotation: true});
+let theFloor = createBodyBox({position: {x: 720/2, y: 640}, size: {w: 720, h:40}, density: 1, restitution: 0,isStatic:true, noRotation: true, dynamicFriction:0.4, staticFriction:0.6});
 
 
 const FIXED_TIMESTEP = 1 / 144;
@@ -90,11 +91,19 @@ function gameLoop(timestamp)
 
     for(let i = 0; i < n; i++)
     {
-        drawPolygon(ctx, phys.bodies[i].transformedVertices, 'blue');
+        
 
+        if(phys.bodies[i].isCircle)
+        {
+          drawCircle(ctx, phys.bodies[i].position, 'red', phys.bodies[i].radius, phys.bodies[i].angle);
+        }
+        else
+        {
+          drawPolygon(ctx, phys.bodies[i].transformedVertices, 'blue');
+        }
+        
     }
         
-            
             
 
     requestAnimationFrame(gameLoop);
@@ -121,21 +130,27 @@ function drawPolygon(ctx, vertices, fillStyle = 'blue')
     ctx.stroke();
 }
 
-function drawCircle(ctx, point, color = 'red', radius = 15, rotation) 
-{
+function drawCircle(ctx, point, color = 'red', radius = 15, rotation = 0) {
+    ctx.save();
+
+    ctx.translate(point.x, point.y);
+    ctx.rotate(rotation);  // rotation is in radians
+
+    // Draw circle centered at (0, 0)
     ctx.beginPath();
-    ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+    ctx.arc(0, 0, radius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-    ctx.stroke(); 
+    ctx.stroke();
 
-    const endX = point.x + Math.cos(rotation) * radius;
-    const endY = point.y + Math.sin(rotation) * radius;
-
+    // Draw direction indicator (along +X axis)
     ctx.beginPath();
-    ctx.moveTo(point.x, point.y);
-    ctx.lineTo(endX, endY);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(radius, 0);  // forward vector (along rotated axis)
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    ctx.restore();
 }
+

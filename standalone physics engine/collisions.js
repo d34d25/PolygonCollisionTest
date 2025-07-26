@@ -1,5 +1,4 @@
-import { dotProduct, subtractVectors, scaleVector, addVectors, almostEqual, almostEqualVector, lengthSquared, distanceSquared, distance, normalize } from "./maths.js";
-import { Mainfold } from "./mainfold.js";
+import { dotProduct, subtractVectors, scaleVector, addVectors, almostEqual, almostEqualVector, lengthSquared, distanceSquared, distance, normalize, multiplyVectors } from "./maths.js";
 
 export function SAT(bodyA, bodyB)
 {
@@ -8,7 +7,6 @@ export function SAT(bodyA, bodyB)
     let normal = {x:0, y:0};
 
     let axis = { x: 0, y: 0 };
-    let edge = { x: 0, y: 0 };
 
     let worldVerticesA = bodyA.transformedVertices;
     let worldVerticesB = bodyB.transformedVertices;
@@ -17,20 +15,13 @@ export function SAT(bodyA, bodyB)
     {
         let va = worldVerticesA[i];
         let vb = worldVerticesA[(i +1) % worldVerticesA.length];
-
-        edge.x = vb.x - va.x;
-        edge.y = vb.y - va.y;
+;
+        let edge = subtractVectors(vb,va);
 
         axis.x = -edge.y;
         axis.y = edge.x;
 
-        let length = Math.hypot(axis.x, axis.y);
-
-        if(length != 0)
-        {
-            axis.x /= length;
-            axis.y /= length;
-        }
+        axis = normalize(axis);
 
         let projectedVertexA = projectVertices(worldVerticesA, axis);
         let projectedVertexB = projectVertices(worldVerticesB, axis);
@@ -63,19 +54,12 @@ export function SAT(bodyA, bodyB)
         let va = worldVerticesB[i];
         let vb = worldVerticesB[(i +1) % worldVerticesB.length];
 
-        edge.x = vb.x - va.x;
-        edge.y = vb.y - va.y;
+        let edge = subtractVectors(vb,va);
 
         axis.x = -edge.y;
         axis.y = edge.x;
 
-        let length = Math.hypot(axis.x, axis.y);
-
-        if(length != 0)
-        {
-            axis.x /= length;
-            axis.y /= length;
-        }
+        axis = normalize(axis);
         
         let projectedVertexA = projectVertices(worldVerticesA, axis);
         let projectedVertexB = projectVertices(worldVerticesB, axis);
@@ -121,60 +105,42 @@ export function SAT(bodyA, bodyB)
 
 export function circleVsPolygon(bodyA, bodyB)
 {
-    if (!bodyA.isCircle) return false;
-
-    let normal = {x:0, y:0};
-    let depth = Infinity;
-    let axis = { x: 0, y: 0 };
-    let edge = { x: 0, y: 0 };
-
-    let projectedVertexB = {min:0, max: 0};
-    let projectedCirlce = {min:0, max: 0};
-
-    let minA = 0;
-    let maxA = 0;
-
-    let minB = 0;
-    let maxB = 0; 
-
-    let axisDepth = 0;
 
     let circleCenter = bodyA.position;
     let circleRadius = bodyA.radius;
 
-    let worldVertices = bodyB.transformedVertices;
+    let vertices = bodyB.transformedVertices;
+    let polygonCenter = bodyB.position;
 
-    for (let i = 0; i < worldVertices.length; i++)
+    let normal = {x:0, y:0};
+    let depth = Infinity;
+
+    let axis = {x:0, y:0};
+    let axisDepth = 0;
+    let minA, maxA, minB, maxB;
+
+    for(let i = 0; i < vertices.length; i++)
     {
-        let va = worldVertices[i];
-        let vb = worldVertices[(i +1) % worldVertices.length];
+        let va = vertices[i];
+        let vb = vertices[(i+1)% vertices.length];
 
-        edge.x = vb.x - va.x;
-        edge.y = vb.y - va.y;
-
+        let edge = subtractVectors(vb,va);
         axis.x = -edge.y;
         axis.y = edge.x;
+        axis = normalize(axis);
 
-        let length = Math.hypot(axis.x, axis.y);
+        let projectedVertex = projectVertices(vertices, axis);
+        let projectedCircle = projectCircle(circleCenter, circleRadius, axis);
 
-        if(length != 0)
-        {
-            axis.x /= length;
-            axis.y /= length;
-        }
+        minA = projectedVertex.min;
+        maxA = projectedVertex.max;
 
-        projectedVertexB = projectVertices(worldVertices, axis);
-        projectedCirlce = projectCircle(circleCenter, circleRadius, axis);
-
-        minA = projectedVertexB.min;
-        maxA = projectedVertexB.max;
-
-        minB = projectedCirlce.min;
-        maxB = projectedCirlce.max;
+        minB = projectedCircle.min;
+        maxB = projectedCircle.max;
 
         if(minA >= maxB || minB >= maxA)
         {
-            return { collision: false };
+            return {collision:false};
         }
 
         axisDepth = Math.min(maxB - minA, maxA - minB);
@@ -185,27 +151,26 @@ export function circleVsPolygon(bodyA, bodyB)
             normal.x = axis.x;
             normal.y = axis.y;
         }
-
     }
 
-    let closestPointIndex = closestPointOnPolygon(circleACenter, worldVerticesB);
+    let cpIndex = closestPointOnPolygon(circleCenter,vertices);
+    let cp = vertices[cpIndex];
 
-    let closestPoint = worldVertices[closestPointIndex];
+    axis = subtractVectors(cp, circleCenter);
+    axis = normalize(axis);
 
-    axis = subtractVectors(closestPoint, circleCenter);
+    let projectedVertex = projectVertices(vertices, axis);
+    let projectedCircle = projectCircle(circleCenter, circleRadius, axis);
 
-    projectedVertexB = projectVertices(worldVerticesB, axis);
-    projectedCirlce = projectCircle(circleACenter, circleARadius, axis);
+    minA = projectedVertex.min;
+    maxA = projectedVertex.max;
 
-    minA = projectedVertexB.min;
-    maxA = projectedVertexB.max;
-
-    minB = projectedCirlce.min;
-    maxB = projectedCirlce.max;
+    minB = projectedCircle.min;
+    maxB = projectedCircle.max;
 
     if(minA >= maxB || minB >= maxA)
     {
-        return { collision: false };
+        return {collision:false};
     }
 
     axisDepth = Math.min(maxB - minA, maxA - minB);
@@ -217,11 +182,9 @@ export function circleVsPolygon(bodyA, bodyB)
         normal.y = axis.y;
     }
 
-    let toCircle = subtractVectors(closestPoint, circleCenter);
+    let direction = subtractVectors(polygonCenter, circleCenter);
 
-    normal = normalize(normal);
-
-    if (dotProduct(toCircle, normal) < 0)
+    if(dotProduct(direction, normal) > 0)
     {
         normal.x = -normal.x;
         normal.y = -normal.y;
@@ -262,7 +225,7 @@ export function findContactPoints(bodyA, bodyB)
 {
     let contactInfo = null;
 
-    if((bodyA.isBox || bodyA.isTriangle) && (bodyB.isBox || bodyB.isTriangle))
+    if(!bodyA.isCircle && !bodyB.isCircle)
     {
         contactInfo = contactPointsPolygon(bodyA, bodyB);
     }
@@ -270,11 +233,11 @@ export function findContactPoints(bodyA, bodyB)
     {
         contactInfo = contactPointsCircle(bodyA, bodyB);
     }
-    else if ((bodyA.isBox || bodyA.isTriangle) && bodyB.isCircle)
+    else if (!bodyA.isCircle && bodyB.isCircle)
     {
         contactInfo = contactPointsPolygonCircle(bodyA, bodyB);
     }
-    else if ((bodyB.isBox || bodyB.isTriangle) && bodyA.isCircle)
+    else if (!bodyB.isCircle && bodyA.isCircle)
     {
         contactInfo = contactPointsPolygonCircle(bodyB, bodyA);
     }
@@ -372,20 +335,49 @@ function contactPointsPolygon(bodyA, bodyB)
     
 }
 
-function contactPointsPolygonCircle(bodyA, bodyB, result)
+function contactPointsPolygonCircle(bodyA, bodyB)
 {
+    let cp = null;
+
+    let vertices = bodyA.transformedVertices;
+
+    let circleCenter = bodyB.position;
+
+    let minDistSq = Infinity;
     
+    for (let i = 0; i < vertices.length; i++)
+    {
+        let va = vertices[i];
+        let vb = vertices[(i + 1) % vertices.length];
+
+        let pointSegDist = pointSegmentDistance(circleCenter, va ,vb);
+
+        if(pointSegDist.distanceSqrd < minDistSq)
+        {
+            minDistSq = pointSegDist.distanceSqrd;
+            cp = pointSegDist.closestPoint;
+        }
+
+    }
+
+    return {contact1: cp, contactCount: 1};
 }
 
-function contactPointsCircle(bodyA, bodyB, result)
+function contactPointsCircle(bodyA, bodyB)
 {
-    
+    let centerA = bodyA.position;
+    let centerB = bodyB.position;
+
+    let radiusA = bodyA.radius;
+
+    let ab = subtractVectors(centerB,centerA);
+
+    let direction = normalize(ab);
+
+    let cp = addVectors(centerA, scaleVector(direction, radiusA));
+
+    return {contact1: cp, contactCount: 1};
 }
-
-
-
-
-
 
 
 
@@ -419,8 +411,8 @@ function projectCircle(center, radius, axis)
     let p1 = addVectors(center, dirAndRadius);
     let p2 = subtractVectors(center, dirAndRadius);
 
-    min = dotProduct(p1, dir);
-    max = dotProduct(p2, dir);
+    min = dotProduct(p1, axis);
+    max = dotProduct(p2, axis);
 
     if(min > max)
     {

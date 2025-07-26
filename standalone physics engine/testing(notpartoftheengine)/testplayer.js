@@ -1,4 +1,4 @@
-import { Rigidbody, createBodyBox } from "../rigidbody.js";
+import { Rigidbody, createBodyBox, createBodyCircle } from "../rigidbody.js";
 export class TestPlayer {
   constructor(body, physWorld) {
     this.body = body;
@@ -19,17 +19,35 @@ export class TestPlayer {
     if (keysPressed['e']) this.body.torque += rotSpeed;
 
     if (mouseClicked && this.spawnCooldown <= 0) {
-      this.spawn(mousePos);
+      this.spawnBox(mousePos);
       this.spawnCooldown = 0.3;
     }
 
     this.spawnCooldown -= timeStep;
   }
 
-  spawn(position) {
+  spawnBox(position) 
+  {
     const newBody = createBodyBox({
       position: { x: position.x, y: position.y },
       size: { w: 20, h: 20 },
+      density: 1,
+      restitution: 0.5,
+      linearDamping: { x: 0, y: 0 },
+      angularDamping: 0,
+      isStatic: false,
+      staticFriction:0.6,
+      dynamicFriction:0.4
+    });
+
+    this.physWorld.bodies.push(newBody);
+  }
+
+  spawnCircle(position) 
+  {
+    const newBody = createBodyCircle({
+      position: { x: position.x, y: position.y },
+      radius: 20,
       density: 1,
       restitution: 0.5,
       linearDamping: { x: 0, y: 0 },
