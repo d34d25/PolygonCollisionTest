@@ -22,33 +22,35 @@ export class PhysWorld
         this.jList = [];
     }
 
-    step(dt, useRotations = false) 
+    step({dt, useRotations = false, iterations = 10}) 
     {
         //Rigidbody.updatedBodiesCount = 0;
 
-        for (let body of this.bodies) 
+        for(let i = 0; i < iterations; i++)
         {
-            body.updateBody(dt, this.gravity);   
-        }
-
-        const n = this.bodies.length;
-
-        for(let i = 0; i < n; i++)
-        {
-            for(let j = i + 1; j < n; j++)
+            for (let body of this.bodies) 
             {
-                const bodyA = this.bodies[i];
-                const bodyB = this.bodies[j];
+                body.updateBody(dt, this.gravity);   
+            }
 
-                if(!bodyA.needsUpdate && !bodyB.needsUpdate) continue;
+            const n = this.bodies.length;
 
-                if(!AABBvsAABB(bodyA, bodyB)) continue;
+            for(let i = 0; i < n; i++)
+            {
+                for(let j = i + 1; j < n; j++)
+                {
+                    const bodyA = this.bodies[i];
+                    const bodyB = this.bodies[j];
 
-                if(bodyA.isStatic && bodyB.isStatic) continue;
+                    if(!AABBvsAABB(bodyA, bodyB)) continue;
 
-                this.collisionStep(bodyA,bodyB, useRotations);
+                    if(bodyA.isStatic && bodyB.isStatic) continue;
+
+                    this.collisionStep(bodyA,bodyB, useRotations);
+                }
             }
         }
+        
     }
 
     collisionStep(bodyA, bodyB, useRotations)
@@ -78,7 +80,7 @@ export class PhysWorld
             }
             else
             {
-                this.resolveCollisionsBasic(manifold);   
+                this.resolveCollisionsBasicWithFriction(manifold);   
             }
             
         }
@@ -178,6 +180,87 @@ export class PhysWorld
         }
 
          
+    }
+
+    resolveCollisionsBasicWithFriction(manifold)
+    {
+
+        const bodyA = manifold.bodyA;
+        const bodyB = manifold.bodyB;
+        const normal =  manifold.normal;
+
+        let relativeVel = subtractVectors(bodyB.linearVelocity, bodyA.linearVelocity);
+
+        let sf = Math.sqrt(bodyA.staticFriction * bodyB.staticFriction);
+        let df = Math.sqrt(bodyA.dynamicFriction * bodyB.dynamicFriction);
+
+
+        if(dotProduct(relativeVel,normal) > 0) return;
+
+        let e = 0;
+
+        if(bodyA.mass === Infinity  || bodyA.isStatic)
+        {
+            e = bodyB.restitution;
+        }
+        else if (bodyB.mass === Infinity  || bodyB.isStatic)
+        {
+            e = bodyA.restitution;
+        }
+        else
+        {
+            e = Math.min(bodyA.restitution,bodyB.restitution);
+        }
+
+        let j;
+
+        j = -(1 + e) * dotProduct(relativeVel, normal);
+
+        j /= bodyA.invMass + bodyB.invMass;
+
+        if(!bodyA.isStatic)
+        {
+            bodyA.linearVelocity.x -= j * bodyA.invMass * normal.x;
+            bodyA.linearVelocity.y -= j * bodyA.invMass * normal.y;
+        }
+
+        if(!bodyB.isStatic)
+        {
+            bodyB.linearVelocity.x += j * bodyB.invMass * normal.x;
+            bodyB.linearVelocity.y += j * bodyB.invMass * normal.y;
+        }
+
+        relativeVel = subtractVectors(bodyB.linearVelocity, bodyA.linearVelocity);
+
+        const velAlongNormal = dotProduct(relativeVel, normal);
+
+        let tangent = subtractVectors(relativeVel, scaleVector(normal, velAlongNormal));
+
+        if (almostEqualVector(tangent, {x: 0, y: 0})) return;
+        tangent = normalize(tangent);
+
+        let jt = -dotProduct(relativeVel, tangent);
+        jt /= bodyA.invMass + bodyB.invMass;
+
+        let frictionImpulse;
+        if (Math.abs(jt) < j * sf) 
+        {
+            frictionImpulse = scaleVector(tangent, jt);
+        } 
+        else 
+        {
+            frictionImpulse = scaleVector(tangent, -j * df);
+        }
+
+        if (!bodyA.isStatic) 
+        {
+            bodyA.linearVelocity = subtractVectors(bodyA.linearVelocity, scaleVector(frictionImpulse, bodyA.invMass));
+        }
+        if (!bodyB.isStatic) 
+        {
+            bodyB.linearVelocity = addVectors(bodyB.linearVelocity, scaleVector(frictionImpulse, bodyB.invMass));
+        }
+
     }
 
     resolveCollisionsRotational(manifold)

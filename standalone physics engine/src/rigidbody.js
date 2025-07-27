@@ -40,15 +40,6 @@ export class Rigidbody
 
         this.aabb = new AABB();
 
-        this.aabbNeedsUpdate = false;
-        this.needsUpdate = false;
-
-        this.lastPosition = {x:this.position.x,y:this.position.y};
-        this.lastAngle = this.angle;
-
-        this.positionChanged = ((this.position.x !== this.lastPosition.x )|| (this.position.y !== this.lastPosition.y));
-        this.angleChanged = (this.angle !== this.lastAngle);
-
         this.FORCE_MULTIPLIER = 7250;
         this.TORQUE_MULTIPLIER = 20000;
     }
@@ -211,9 +202,7 @@ export class Rigidbody
     {
         if(this.isStatic) return;
 
-        if (!this.needsUpdate) return;
-
-        Rigidbody.updatedBodiesCount++;
+        //Rigidbody.updatedBodiesCount++;
 
         let acceleration = {x: 0, y:0};
 
@@ -238,7 +227,6 @@ export class Rigidbody
         this.position.x += this.linearVelocity.x * time;
         this.position.y += this.linearVelocity.y * time;
 
-
         //angle
         angularAcceleration += this.torque / this.inertia;
 
@@ -247,20 +235,7 @@ export class Rigidbody
         
         this.angularVelocity *= Math.pow(1 -this.angularDamping, time);
 
-
-        //optimization
-        let positionChanged = ((this.position.x !== this.lastPosition.x )|| (this.position.y !== this.lastPosition.y));
-        let angleChanged = (this.angle !== this.lastAngle);
-
-        if(positionChanged || angleChanged) this.needsUpdate = true, this.aabbNeedsUpdate = true;
-        else this.needsUpdate = false ,this.aabbNeedsUpdate = false;
-
-        if(this.aabbNeedsUpdate) calculateAABB(this);
-
-        this.lastPosition.x = this.position.x;
-        this.lastPosition.y = this.position.y;
-
-        this.lastAngle = this.angle;
+        calculateAABB(this);
 
         //force reset
         this.force.x = 0;

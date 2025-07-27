@@ -1,4 +1,5 @@
 circle vs circle DONE
 circle vs polygon DONE
 friction DONE
-optimization
+friction to basic collision resolution
+optimization 

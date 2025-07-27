@@ -26,7 +26,7 @@ export class TestPlayer {
     this.body.addTorque(rotation);
 
     if (mouseClicked && this.spawnCooldown <= 0) {
-      this.spawnCircle(mousePos);
+      this.spawnBox(mousePos);
       this.spawnCooldown = 0.3;
     }
 

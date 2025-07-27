@@ -15,7 +15,6 @@ export function SAT(bodyA, bodyB)
     {
         let va = worldVerticesA[i];
         let vb = worldVerticesA[(i +1) % worldVerticesA.length];
-;
         let edge = subtractVectors(vb,va);
 
         axis.x = -edge.y;
@@ -96,9 +95,6 @@ export function SAT(bodyA, bodyB)
         normal.x = -normal.x;
         normal.y = -normal.y;
     }
-
-    
-    
     
     return {collision: true, normal: normal ,depth: depth};
 }
@@ -232,7 +228,6 @@ export function AABBvsAABB(bodyA, bodyB)
         a.maxY >= b.minY
     );
 }
-
 
 export function findContactPoints(bodyA, bodyB)
 {
@@ -393,8 +388,6 @@ function contactPointsCircle(bodyA, bodyB)
 }
 
 
-
-
 function projectVertices(vertices, axis)
 {
     let min = Infinity;
@@ -494,7 +487,8 @@ function pointSegmentDistance(p, a, b)
     };
 }
 
-export function areContactsAligned(contact1, contact2, normal) {
+export function areContactsAligned(contact1, contact2, normal) 
+{
     if (!contact1 || !contact2) return false;
 
     let edge = subtractVectors(contact2, contact1);
