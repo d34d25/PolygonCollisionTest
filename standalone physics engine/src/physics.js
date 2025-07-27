@@ -1,9 +1,11 @@
-import { areContactsAligned, circleVsCircle, circleVsPolygon, findContactPoints, SAT } from "./collisions.js";
+import { AABBvsAABB, areContactsAligned, circleVsCircle, circleVsPolygon, findContactPoints, SAT } from "./collisions.js";
 import { addVectors, almostEqualVector, crossProduct, dotProduct, multiplyVectors, normalize, scaleVector, subtractVectors } from "./maths.js";
 import { Mainfold } from "./mainfold.js";
 
 export class PhysWorld
 {
+    
+
     constructor(bodies = [], gravity = {x:0, y:0})
     {
         this.bodies = bodies;
@@ -20,11 +22,13 @@ export class PhysWorld
         this.jList = [];
     }
 
-    step(ctx, dt, useRotations = false) 
+    step(dt, useRotations = false) 
     {
+        //Rigidbody.updatedBodiesCount = 0;
 
-        for (let body of this.bodies) {
-            body.updateBody(dt, this.gravity);
+        for (let body of this.bodies) 
+        {
+            body.updateBody(dt, this.gravity);   
         }
 
         const n = this.bodies.length;
@@ -36,19 +40,24 @@ export class PhysWorld
                 const bodyA = this.bodies[i];
                 const bodyB = this.bodies[j];
 
+                if(!bodyA.needsUpdate && !bodyB.needsUpdate) continue;
+
+                if(!AABBvsAABB(bodyA, bodyB)) continue;
+
                 if(bodyA.isStatic && bodyB.isStatic) continue;
 
-                this.collisionStep(ctx, bodyA,bodyB, useRotations);
+                this.collisionStep(bodyA,bodyB, useRotations);
             }
         }
     }
 
-    collisionStep(ctx, bodyA, bodyB, useRotations)
+    collisionStep(bodyA, bodyB, useRotations)
     {   
         let result = this.resolveCollisions(bodyA, bodyB);
 
         if(result.collision)
         {
+
             this.separateBodies(bodyA,bodyB, result);
 
             let contacts = findContactPoints(bodyA,bodyB);
@@ -63,8 +72,6 @@ export class PhysWorld
                 contacts.contactCount
             );
 
-            this.logContactPoints(ctx, manifold);
-
             if(useRotations)
             {
                 this.resolveCollisionsRotationalAndFriction(manifold);
@@ -73,6 +80,7 @@ export class PhysWorld
             {
                 this.resolveCollisionsBasic(manifold);   
             }
+            
         }
     }
 
@@ -123,7 +131,6 @@ export class PhysWorld
         return result;
 
     }
-
 
     resolveCollisionsBasic(manifold)
     {
@@ -561,9 +568,13 @@ export class PhysWorld
             }
             
         }
+
     }
 
-    drawCircle(ctx, point, color = 'red', radius = 15, rotation) 
+    
+}
+
+function drawCircle(ctx, point, color = 'red', radius = 15, rotation) 
     {
         ctx.beginPath();
         ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
@@ -583,71 +594,49 @@ export class PhysWorld
     }
 
 
-    logContactPoints(ctx, contacts) 
-    {
-        const drawNormal = (point, normal, color = 'blue', scale = 30) => {
-            const end = {
-                x: point.x + normal.x * scale,
-                y: point.y + normal.y * scale
-            };
 
-            // Draw the normal as a line
-            ctx.beginPath();
-            ctx.moveTo(point.x, point.y);
-            ctx.lineTo(end.x, end.y);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Optionally draw arrowhead
-            const arrowSize = 5;
-            const angle = Math.atan2(end.y - point.y, end.x - point.x);
-
-            ctx.beginPath();
-            ctx.moveTo(end.x, end.y);
-            ctx.lineTo(
-                end.x - arrowSize * Math.cos(angle - Math.PI / 6),
-                end.y - arrowSize * Math.sin(angle - Math.PI / 6)
-            );
-            ctx.lineTo(
-                end.x - arrowSize * Math.cos(angle + Math.PI / 6),
-                end.y - arrowSize * Math.sin(angle + Math.PI / 6)
-            );
-            ctx.lineTo(end.x, end.y);
-            ctx.fillStyle = color;
-            ctx.fill();
+function logContactPoints(ctx, contacts) 
+{
+    const drawNormal = (point, normal, color = 'blue', scale = 30) => {
+    const end = {
+            x: point.x + normal.x * scale,
+            y: point.y + normal.y * scale
         };
 
-        if (ctx && contacts.contactCount >= 1) {
-            this.drawCircle(ctx, contacts.contact1, 'yellow', 10, 0);
-            drawNormal(contacts.contact1, contacts.normal, 'black');
-        }
+        // Draw the normal as a line
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-        if (ctx && contacts.contactCount === 2) {
-            this.drawCircle(ctx, contacts.contact2, 'yellow', 10, 0);
-            drawNormal(contacts.contact2, contacts.normal, 'black');
-        }
+        // Optionally draw arrowhead
+        const arrowSize = 5;
+        const angle = Math.atan2(end.y - point.y, end.x - point.x);
+
+        ctx.beginPath();
+        ctx.moveTo(end.x, end.y);
+        ctx.lineTo(
+            end.x - arrowSize * Math.cos(angle - Math.PI / 6),
+            end.y - arrowSize * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+            end.x - arrowSize * Math.cos(angle + Math.PI / 6),
+            end.y - arrowSize * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.lineTo(end.x, end.y);
+        ctx.fillStyle = color;
+        ctx.fill();
+    };
+
+    if (ctx && contacts.contactCount >= 1) {
+        drawCircle(ctx, contacts.contact1, 'yellow', 10, 0);
+        drawNormal(contacts.contact1, contacts.normal, 'black');
     }
 
+    if (ctx && contacts.contactCount === 2) {
+        drawCircle(ctx, contacts.contact2, 'yellow', 10, 0);
+        drawNormal(contacts.contact2, contacts.normal, 'black');
+    }
 }
-
-
-
-/**
- *   let poly = bodyA.vertices.length < bodyA.vertices.length ? bodya : bodyA;
-        
-        const vertexCount = poly.vertices.length;
-
-        if(contactCount > 1 && (bodyB.size.x >20 || bodyB.size.y >20))
-        {
-            if(vertexCount == 4)
-            {
-                e *= vertexCount;
-            }
-            else if(vertexCount == 3)
-            {
-                e *= vertexCount * 3.3;
-            }
-            
-        }
- */

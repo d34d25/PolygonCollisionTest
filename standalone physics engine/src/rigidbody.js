@@ -1,5 +1,9 @@
+import { AABB } from "./aabb.js";
+
 export class Rigidbody
 {
+    static updatedBodiesCount = 0;
+
     constructor(position, density, restitution, isStatic, rotates) 
     {
         this.position = position;
@@ -33,6 +37,20 @@ export class Rigidbody
 
         this.type = "";
         this.types = ["box", "triangle", "circle"];
+
+        this.aabb = new AABB();
+
+        this.aabbNeedsUpdate = false;
+        this.needsUpdate = false;
+
+        this.lastPosition = {x:this.position.x,y:this.position.y};
+        this.lastAngle = this.angle;
+
+        this.positionChanged = ((this.position.x !== this.lastPosition.x )|| (this.position.y !== this.lastPosition.y));
+        this.angleChanged = (this.angle !== this.lastAngle);
+
+        this.FORCE_MULTIPLIER = 7250;
+        this.TORQUE_MULTIPLIER = 20000;
     }
 
     get isBox()
@@ -87,34 +105,71 @@ export class Rigidbody
     {
         this.position.x += amount.x;
         this.position.y += amount.y;
+        
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
     }
 
-
-    moveTo(amount)
+    setPosition(amount)
     {
         this.position.x = amount.x;
         this.position.y = amount.y;
+
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
+
+        calculateAABB(this);
     }
 
     rotate(amount)
     {
         this.angle += amount;
+
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
     }
 
-    rotateTo(amount)
+    setAngle(amount)
     {
         this.angle = amount;
+
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
+
+        calculateAABB(this);
     }
 
     addForce(amount)
     {
-        this.force = amount;
+        this.force = {x: amount.x * this.FORCE_MULTIPLIER, y: amount.y * this.FORCE_MULTIPLIER};
+        
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
     }
 
     addTorque(amount)
     {
-        this.torque = amount;
+        this.torque = amount * this.TORQUE_MULTIPLIER;
+
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
     }
+
+    setLinearVelocity(amount)
+    {
+        this.linearVelocity = amount;
+
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
+    }
+
+    setAngularVelocity(amount)
+    {
+        this.angularVelocity = amount;
+        this.needsUpdate = true;
+        this.aabbNeedsUpdate = true;
+    }
+
 
     createBox() 
     {
@@ -156,10 +211,15 @@ export class Rigidbody
     {
         if(this.isStatic) return;
 
+        if (!this.needsUpdate) return;
+
+        Rigidbody.updatedBodiesCount++;
+
         let acceleration = {x: 0, y:0};
 
         let angularAcceleration = 0;
 
+        //position
         acceleration.x += this.force.x / this.mass;
         acceleration.y += this.force.y / this.mass;
 
@@ -178,25 +238,75 @@ export class Rigidbody
         this.position.x += this.linearVelocity.x * time;
         this.position.y += this.linearVelocity.y * time;
 
+
+        //angle
         angularAcceleration += this.torque / this.inertia;
-        this.angularVelocity += angularAcceleration;
+
+        this.angularVelocity += angularAcceleration * time;
         this.angle += this.angularVelocity * time;
+        
         this.angularVelocity *= Math.pow(1 -this.angularDamping, time);
 
+
+        //optimization
+        let positionChanged = ((this.position.x !== this.lastPosition.x )|| (this.position.y !== this.lastPosition.y));
+        let angleChanged = (this.angle !== this.lastAngle);
+
+        if(positionChanged || angleChanged) this.needsUpdate = true, this.aabbNeedsUpdate = true;
+        else this.needsUpdate = false ,this.aabbNeedsUpdate = false;
+
+        if(this.aabbNeedsUpdate) calculateAABB(this);
+
+        this.lastPosition.x = this.position.x;
+        this.lastPosition.y = this.position.y;
+
+        this.lastAngle = this.angle;
+
+        //force reset
         this.force.x = 0;
         this.force.y = 0;
     }
+    
 
 }
 
-//this.linearVelocity.x += gravity.x * time;
-//this.linearVelocity.y += gravity.y * time;
 
-// force = mass * acc
-// acc = force / mass;
+function calculateAABB(body)
+{
+    const aabb = body.aabb;
+    
+    if(body.isCircle)
+    {
+        aabb.minX = body.position.x - body.radius;
+        aabb.maxX = body.position.x + body.radius;
 
-//FlatVector acceleration = this.force / this.Mass;
-//this.linearVelocity += acceleration * time;
+        aabb.minY =  body.position.y - body.radius;
+        aabb.maxY =  body.position.y + body.radius;
+    }
+    else
+    {
+        
+        const vertices = body.transformedVertices;
+
+        aabb.minX = Infinity;
+        aabb.maxX = -Infinity;
+        aabb.minY = Infinity;
+        aabb.maxY = -Infinity;
+
+        for (let i = 0; i < vertices.length; i++) 
+        {
+            const v = vertices[i];
+
+            if (v.x < aabb.minX) aabb.minX = v.x;
+            if (v.x > aabb.maxX) aabb.maxX = v.x;
+
+            if (v.y < aabb.minY) aabb.minY = v.y;
+            if (v.y > aabb.maxY) aabb.maxY = v.y;
+        }
+
+    }
+}
+
 
 
 export function createBodyBox({position = {x:0, y:0},size = {w:10, h:10},density = 1,restitution = 0.5,linearDamping = {x:0, y:0},
@@ -219,11 +329,15 @@ export function createBodyBox({position = {x:0, y:0},size = {w:10, h:10},density
 
     body.affectedByGravity = affectedByGravity;
 
+    calculateAABB(body);
+
     if(!body.isStatic)
     {
         body.mass = area * body.density;
         body.inertia = (1 / 12) * body.mass * (body.size.w * body.size.w + body.size.h * body.size.h);
     }
+
+    body.needsUpdate = true;
 
     return body;
 }
@@ -249,12 +363,16 @@ export function createBodyTriangle({position = {x:0, y:0},size = {w:10, h:10},de
 
     body.affectedByGravity = affectedByGravity;
 
+    calculateAABB(body);
+
     if(!body.isStatic)
     {
         const area = 0.5 * body.size.w * body.size.h;
         body.mass = area * density;
         body.inertia = (body.mass * (base * base + height * height)) / 36;
     }
+
+    body.needsUpdate = true;
 
     return body;
 }   
@@ -284,6 +402,8 @@ export function createBodyCircle({position = {x:0, y:0},radius = 10,density = 1,
 
     body.affectedByGravity = affectedByGravity;
 
+    calculateAABB(body);
+
     if(!body.isStatic)
     {
         const area = Math.PI * body.radius * body.radius;
@@ -291,5 +411,10 @@ export function createBodyCircle({position = {x:0, y:0},radius = 10,density = 1,
         body.inertia = 0.5 * body.mass * body.radius * body.radius;
     }
 
+    body.needsUpdate = true;
+
     return body;
 }
+
+
+

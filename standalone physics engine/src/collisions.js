@@ -220,6 +220,19 @@ export function circleVsCircle(bodyA, bodyB)
     return {collision: true, normal: normal, depth: depth};
 }
 
+export function AABBvsAABB(bodyA, bodyB) 
+{
+    const a = bodyA.aabb;
+    const b = bodyB.aabb;
+
+    return (
+        a.minX <= b.maxX &&
+        a.maxX >= b.minX &&
+        a.minY <= b.maxY &&
+        a.maxY >= b.minY
+    );
+}
+
 
 export function findContactPoints(bodyA, bodyB)
 {
